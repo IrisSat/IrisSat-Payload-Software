@@ -42,7 +42,7 @@ These settings should now be changed in the software, not by re-generating the c
 - The GPIO pins for the multiplexer signals have been assigned and labeled.
 - The ADC inputs are assigned with the default settings.
 
-## Clock Configuration
+### Clock Configuration
 - The project is setup to use the 25MHz external clock.
 - The main clock speed is 200MHz, and the other clock signals are derived using the standard prescalers.
 
