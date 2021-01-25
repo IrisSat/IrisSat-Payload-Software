@@ -17,16 +17,12 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
-
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
 #include "adc.h"
-#include "can.h"
-#include "dcmi.h"
-#include "i2c.h"
 #include "gpio.h"
-#include "fmc.h"
+#include "math.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -57,7 +53,7 @@
 void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
-
+int test(int a, int b);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -72,6 +68,7 @@ void MX_FREERTOS_Init(void);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
+
 
   /* USER CODE END 1 */
 
@@ -94,28 +91,51 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
-  MX_CAN2_Init();
-  MX_FMC_Init();
-  MX_DCMI_Init();
-  MX_I2C2_Init();
-  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
-
+  double temp;
+  double resistance;
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();
   /* Start scheduler */
-  osKernelStart();
-
+  //osKernelStart();
+ //HAL_ADC_Start(&hadc1);
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  uint32_t ADCValue;
+
+  double temperatures[60];
+  int count = 0;
   while (1)
   {
     /* USER CODE END WHILE */
 
+	  if (HAL_ADC_Start(&hadc1) != HAL_OK)
+	  {
+	      /* Start Conversation Error */
+	      // Error_Handler();
+	  }
+	  if (HAL_ADC_PollForConversion(&hadc1, 500) != HAL_OK)
+	  {
+	      /* End Of Conversion flag not set on time */
+	      // Error_Handler();
+	      ADCValue=-1;
+	  }
+	  else
+	  {
+	      /* ADC conversion completed */
+	      /*##-5- Get the converted value of regular channel ########################*/
+	      ADCValue = HAL_ADC_GetValue(&hadc1);
+	      double voltage =(double)ADCValue/4096*3 - 3;
+	      double resistance = (10000*(0.5-voltage/3))/(0.5+voltage/3);
+	      temperatures[count] =  1/(9.02e-4 + 2.49e-4*log(resistance)+2.01e-7*pow(log(resistance),3)) - 273.15;
+	      count = (count+1)%60;
+	  }
+	  HAL_ADC_Stop(&hadc1);
+	 HAL_Delay(60000);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -129,23 +149,20 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
-  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
-  /** Configure LSE Drive Capability
-  */
-  HAL_PWR_EnableBkUpAccess();
   /** Configure the main internal regulator output voltage
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
-  /** Initializes the CPU, AHB and APB busses clocks
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 12;
-  RCC_OscInitStruct.PLL.PLLN = 192;
+  RCC_OscInitStruct.PLL.PLLM = 25;
+  RCC_OscInitStruct.PLL.PLLN = 432;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -158,7 +175,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  /** Initializes the CPU, AHB and APB busses clocks
+  /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -167,20 +184,17 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_6) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2C2|RCC_PERIPHCLK_I2C3;
-  PeriphClkInitStruct.I2c2ClockSelection = RCC_I2C2CLKSOURCE_PCLK1;
-  PeriphClkInitStruct.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK)
   {
     Error_Handler();
   }
 }
 
 /* USER CODE BEGIN 4 */
+int test(int a, int b){
+
+	return a+b;
+}
 
 /* USER CODE END 4 */
 
@@ -213,7 +227,10 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
+  __disable_irq();
+  while (1)
+  {
+  }
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -229,7 +246,7 @@ void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
   /* User can add his own implementation to report the file name and line number,
-     tex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

@@ -29,7 +29,6 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f7xx_hal.h"
-#include "stm32f7xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -59,20 +58,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define WDI_Pin GPIO_PIN_5
-#define WDI_GPIO_Port GPIOE
-#define MUX2_Enable_Pin GPIO_PIN_0
-#define MUX2_Enable_GPIO_Port GPIOB
-#define MUX3_Enable_Pin GPIO_PIN_1
-#define MUX3_Enable_GPIO_Port GPIOB
-#define MUX3_EnableB2_Pin GPIO_PIN_2
-#define MUX3_EnableB2_GPIO_Port GPIOB
-#define MUX2_Control_Pin GPIO_PIN_12
-#define MUX2_Control_GPIO_Port GPIOB
-#define MUX3_Control_Pin GPIO_PIN_14
-#define MUX3_Control_GPIO_Port GPIOB
-#define MUX4_Control_Pin GPIO_PIN_15
-#define MUX4_Control_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
