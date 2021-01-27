@@ -21,8 +21,8 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "adc.h"
+#include "can.h"
 #include "gpio.h"
-#include "math.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -91,51 +91,25 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
+  MX_CAN2_Init();
   /* USER CODE BEGIN 2 */
-  double temp;
-  double resistance;
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();
   /* Start scheduler */
-  //osKernelStart();
- //HAL_ADC_Start(&hadc1);
+  osKernelStart();
+
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint32_t ADCValue;
 
-  double temperatures[60];
-  int count = 0;
   while (1)
   {
     /* USER CODE END WHILE */
 
-	  if (HAL_ADC_Start(&hadc1) != HAL_OK)
-	  {
-	      /* Start Conversation Error */
-	      // Error_Handler();
-	  }
-	  if (HAL_ADC_PollForConversion(&hadc1, 500) != HAL_OK)
-	  {
-	      /* End Of Conversion flag not set on time */
-	      // Error_Handler();
-	      ADCValue=-1;
-	  }
-	  else
-	  {
-	      /* ADC conversion completed */
-	      /*##-5- Get the converted value of regular channel ########################*/
-	      ADCValue = HAL_ADC_GetValue(&hadc1);
-	      double voltage =(double)ADCValue/4096*3 - 3;
-	      double resistance = (10000*(0.5-voltage/3))/(0.5+voltage/3);
-	      temperatures[count] =  1/(9.02e-4 + 2.49e-4*log(resistance)+2.01e-7*pow(log(resistance),3)) - 273.15;
-	      count = (count+1)%60;
-	  }
-	  HAL_ADC_Stop(&hadc1);
-	 HAL_Delay(60000);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

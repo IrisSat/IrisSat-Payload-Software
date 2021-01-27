@@ -26,7 +26,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "queue.h"
+#include "can.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,6 +49,20 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
+osThreadId_t canTxTaskHandle;
+const osThreadAttr_t canTxTask_attributes = {
+  .name = "canTxTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
+
+osThreadId_t canRxTaskHandle;
+const osThreadAttr_t canRxTask_attributes = {
+  .name = "canRxTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
+
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -58,6 +74,10 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
+
+void canRxTask(void* pvParams);
+void canTxTestTask(void* pvParams);
+
 
 /* USER CODE END FunctionPrototypes */
 
@@ -94,9 +114,13 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  canRxTaskHandle = osThreadNew(canRxTask, NULL, &canRxTask_attributes);
+  canTxTaskHandle = osThreadNew(canTxTestTask,NULL,&canTxTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -125,6 +149,32 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+
+void canRxTask(void* pvParams){
+
+	int messages_processed = 0;
+	can_frame_t rx_msg;
+	while(1)
+	{
+	        if (xQueueReceive(rxQueue, &rx_msg, portMAX_DELAY) == pdTRUE)
+	        {
+	            messages_processed++;
+	        }
+	}
+}
+
+void canTxTestTask(void* pvParams){
+
+	startCAN();
+	char* testString = "test!";
+	while(1){
+
+		sendMessageCAN(0x321,(uint8_t*)testString, strlen(testString)+1);
+
+		vTaskDelay(pdMS_TO_TICKS(2000));
+	}
+}
+
 
 /* USER CODE END Application */
 
