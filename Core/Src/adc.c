@@ -21,7 +21,7 @@
 #include "adc.h"
 
 /* USER CODE BEGIN 0 */
-
+#include "math.h"
 /* USER CODE END 0 */
 
 ADC_HandleTypeDef hadc1;
@@ -36,13 +36,13 @@ void MX_ADC1_Init(void)
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.NbrOfConversion = 3;
   hadc1.Init.DMAContinuousRequests = DISABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -51,8 +51,24 @@ void MX_ADC1_Init(void)
   }
   /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
   */
-  sConfig.Channel = ADC_CHANNEL_14;
+  sConfig.Channel = ADC_CHANNEL_13;
   sConfig.Rank = ADC_REGULAR_RANK_1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  sConfig.Channel = ADC_CHANNEL_14;
+  sConfig.Rank = ADC_REGULAR_RANK_2;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Rank = ADC_REGULAR_RANK_3;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
@@ -115,6 +131,61 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* adcHandle)
 }
 
 /* USER CODE BEGIN 1 */
+
+//Reads all three channels and returns the results. Results are 12 bit numbers, 0->0V, 4096->3V.
+//results[0] = sample plate temp, results[1] = board temp, results[2] = power good
+void adcReadAllChannels_int(uint16_t* results){
+
+	HAL_ADC_Start(&hadc1);
+    // Get ADC value
+    results[0] = HAL_ADC_GetValue(&hadc1);
+    results[1] = HAL_ADC_GetValue(&hadc1);
+    results[2] = HAL_ADC_GetValue(&hadc1);
+    HAL_ADC_PollForConversion(&hadc1, 500);
+    HAL_ADC_Stop(&hadc1);
+
+}
+
+//Reads one channel of the ADC.Results are 12 bit numbers, 0->0V, 4096->3V.
+uint16_t adcReadChannel_int(uint8_t channel){
+
+	uint16_t temp[3];
+	adcReadAllChannels_int(temp);
+	return temp[channel];
+
+}
+
+//Same as adcReadAllChannels_int, except results are as float and scaled for reference voltage.
+void adcReadAllChannels_volts(float* results){
+
+	uint16_t temp[3];
+	adcReadAllChannels_int(temp);
+
+	//We have a 12 bit ADC, so the max value is 4095, and the reference voltage is 3V.
+	results[0] = temp[0]/4095 *3;
+	results[1] = temp[1]/4095 *3;
+	results[2] = temp[2]/4095 *3;
+}
+
+//Same as adcReadChannel_int, except result is as float and scaled for reference voltage.
+float adcReadChannel_volts(uint8_t channel){
+
+	float temp[3];
+	adcReadAllChannels_volts(temp);
+
+	return temp[channel];
+
+}
+
+//Converts a voltage to temperature.Takes the parameters A,B,C.
+float getThermistorTemp(float voltage, float A,float B, float C){
+
+	double refVoltage = 3;
+	double dv = voltage - refVoltage;
+	double resistance = (10000*(0.5-dv/refVoltage))/(0.5+dv/refVoltage);
+	float temperature =  1/(A + B*log(resistance)+C*pow(log(resistance),3)) - 273.15;
+	return temperature;
+}
 
 /* USER CODE END 1 */
 

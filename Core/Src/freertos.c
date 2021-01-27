@@ -26,7 +26,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "adc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,6 +47,13 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
+osThreadId_t thermistorTaskHandle;
+const osThreadAttr_t thermistorTask_attributes = {
+  .name = "thermistorTask",
+  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
+
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -58,7 +65,7 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
+void measureThermistorTask(void* pvParams);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
@@ -97,6 +104,7 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  thermistorTaskHandle = osThreadNew(measureThermistorTask,NULL,&thermistorTask_attributes);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -125,7 +133,20 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+void measureThermistorTask(void* pvParams){
 
+	float boardTemps[60]; //Hold up to 60 temperature measurements.
+	uint8_t index=0;
+	while(1){
+
+		float boardThermistorVolts = adcReadChannel_volts(ADC_CHANNEL_BOARD);
+		boardTemps[index] = getThermistorTemp(boardThermistorVolts, 9.02e-4, 2.49e-4, 2.01e-7);
+
+		index = (index+1)%60; //Goes from 0 to 59, then will overwrite old data.
+		vTaskDelay(pdMS_TO_TICKS(60000));//Delay one minute
+	}
+
+}
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

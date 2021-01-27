@@ -34,12 +34,30 @@ extern "C" {
 extern ADC_HandleTypeDef hadc1;
 
 /* USER CODE BEGIN Private defines */
-
+#define ADC_CHANNEL_BOARD	1
+#define ADC_CHANNEL_PLATE	0
+#define ADC_CHANNEL_POWER	2
 /* USER CODE END Private defines */
 
 void MX_ADC1_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+
+//Reads all three channels and returns the results. Results are 12 bit numbers, 0->0V, 4096->3V.
+//results[0] = sample plate temp, results[1] = board temp, results[2] = power good
+void adcReadAllChannels_int(uint16_t* results);
+
+//Reads one channel of the ADC.Results are 12 bit numbers, 0->0V, 4096->3V.
+uint16_t adcReadChannel_int(uint8_t channel);
+
+//Same as adcReadAllChannels_int, except results are as float and scaled for reference voltage.
+void adcReadAllChannels_volts(float* results);
+
+//Same as adcReadChannel_int, except result is as float and scaled for reference voltage.
+float adcReadChannel_volts(uint8_t channel);
+
+//Converts a voltage to temperature in Celcius.Takes the parameters A,B,C.
+float getThermistorTemp(float voltage, float A,float B, float C);
 
 /* USER CODE END Prototypes */
 
