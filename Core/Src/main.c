@@ -129,13 +129,13 @@ int main(void)
 	      /* ADC conversion completed */
 	      /*##-5- Get the converted value of regular channel ########################*/
 	      ADCValue = HAL_ADC_GetValue(&hadc1);
-	      double voltage =(double)ADCValue/4096*3 - 3;
-	      double resistance = (10000*(0.5-voltage/3))/(0.5+voltage/3);
+	      double voltage = ((double)ADCValue/4096*3 -1.5)/1.09;
+	      double resistance = ((30000-20000*voltage)/(30000+20000*voltage) )* 10000; //(10000*(0.5-voltage/3))/(0.5+voltage/3);
 	      temperatures[count] =  1/(9.02e-4 + 2.49e-4*log(resistance)+2.01e-7*pow(log(resistance),3)) - 273.15;
 	      count = (count+1)%60;
 	  }
 	  HAL_ADC_Stop(&hadc1);
-	 HAL_Delay(60000);
+	 HAL_Delay(600);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
