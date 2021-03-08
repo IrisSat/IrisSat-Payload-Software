@@ -114,8 +114,6 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-  canRxTaskHandle = osThreadNew(canRxTask, NULL, &canRxTask_attributes);
-  canTxTaskHandle = osThreadNew(canTxTestTask,NULL,&canTxTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
