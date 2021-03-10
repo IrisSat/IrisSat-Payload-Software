@@ -1,6 +1,11 @@
 # IrisSat-PayloadSoftware
 Software for IrisSat Payload Controller.
 
+Branches:
+canEx1_nucleo -> Should have working can code.
+CAN -> merged canEx1_nucleo, but not sure if merged code will work...
+master-> workign code with adc reading.
+
 ## Building and Running
 
 The project is setup for the STM32CubeIDE.
