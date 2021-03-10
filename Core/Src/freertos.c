@@ -49,19 +49,6 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
 
-osThreadId_t canTxTaskHandle;
-const osThreadAttr_t canTxTask_attributes = {
-  .name = "canTxTask",
-  .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
-};
-
-osThreadId_t canRxTaskHandle;
-const osThreadAttr_t canRxTask_attributes = {
-  .name = "canRxTask",
-  .priority = (osPriority_t) osPriorityNormal,
-  .stack_size = 128 * 4
-};
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -69,6 +56,12 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 128 * 4
+};
+
+const osThreadAttr_t canTask_attributes = {
+  .name = "canTask",
+  .priority = (osPriority_t) osPriorityHigh,
   .stack_size = 128 * 4
 };
 
@@ -114,7 +107,7 @@ void MX_FREERTOS_Init(void) {
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
+  osThreadNew(canTask,NULL,&canTask_attributes);
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
 
@@ -147,31 +140,6 @@ void StartDefaultTask(void *argument)
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
-
-void canRxTask(void* pvParams){
-
-	int messages_processed = 0;
-	can_frame_t rx_msg;
-	while(1)
-	{
-	        if (xQueueReceive(rxQueue, &rx_msg, portMAX_DELAY) == pdTRUE)
-	        {
-	            messages_processed++;
-	        }
-	}
-}
-
-void canTxTestTask(void* pvParams){
-
-	startCAN();
-	char* testString = "test!";
-	while(1){
-
-		sendMessageCAN(0x321,(uint8_t*)testString, strlen(testString)+1);
-
-		vTaskDelay(pdMS_TO_TICKS(2000));
-	}
-}
 
 
 /* USER CODE END Application */

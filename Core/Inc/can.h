@@ -41,24 +41,25 @@ extern CAN_HandleTypeDef hcan2;
 void MX_CAN2_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-typedef uint32_t can_id_t;
-typedef struct {
-	/** 32 bit CAN identifier */
-	can_id_t id;
-	/** Data Length Code */
-	uint8_t dlc;
-	/**< Frame Data - 0 to 8 bytes */
-	union __attribute__((aligned(8))) {
-		uint8_t data[8];
-		uint16_t data16[4];
-		uint32_t data32[2];
-	};
-} can_frame_t;
-QueueHandle_t rxQueue;
+//typedef uint32_t can_id_t;
+//typedef struct {
+//	/** 32 bit CAN identifier */
+//	can_id_t id;
+//	/** Data Length Code */
+//	uint8_t dlc;
+//	/**< Frame Data - 0 to 8 bytes */
+//	union __attribute__((aligned(8))) {
+//		uint8_t data[8];
+//		uint16_t data16[4];
+//		uint32_t data32[2];
+//	};
+//} can_frame_t;
+//QueueHandle_t rxQueue;
 
 void startCAN();
-
 void sendMessageCAN(uint32_t id,uint8_t* data, uint8_t length);
+void can_irq(CAN_HandleTypeDef *pcan);
+void canTask(void * pvParams);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

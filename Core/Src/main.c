@@ -93,14 +93,14 @@ int main(void)
   MX_ADC1_Init();
   MX_CAN2_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_CAN_MspInit(&hcan2);
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();
   /* Start scheduler */
-  //osKernelStart();
+  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
@@ -109,21 +109,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	  uint32_t mb;
-	  CAN_TxHeaderTypeDef msg;
-	  uint8_t data[] = "Hello!";
 
-	  msg.StdId = 127;
-	  msg.IDE = CAN_ID_STD;
-	  msg.RTR = CAN_RTR_DATA;
-	  msg.DLC = 6;
-	  msg.TransmitGlobalTime = DISABLE;
-
-	  if (HAL_CAN_AddTxMessage(&hcan2, &msg, data, &mb) != HAL_OK) {
-	    Error_Handler();
-	  }
-
-	  HAL_Delay(2000);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

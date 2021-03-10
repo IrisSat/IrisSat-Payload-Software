@@ -32,11 +32,11 @@ void MX_CAN2_Init(void)
 {
 
   hcan2.Instance = CAN2;
-  hcan2.Init.Prescaler = 108;
+  hcan2.Init.Prescaler = 12;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
   hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan2.Init.TimeSeg1 = CAN_BS1_3TQ;
-  hcan2.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan2.Init.TimeSeg1 = CAN_BS1_13TQ;
+  hcan2.Init.TimeSeg2 = CAN_BS2_4TQ;
   hcan2.Init.TimeTriggeredMode = DISABLE;
   hcan2.Init.AutoBusOff = DISABLE;
   hcan2.Init.AutoWakeUp = DISABLE;
@@ -124,31 +124,24 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 /* USER CODE BEGIN 1 */
 void startCAN(){
 
-	  //For now, setup the filter to accept all messages.
-	  CAN_FilterTypeDef filterConfig;
-	  filterConfig.FilterMode = CAN_FILTERMODE_IDMASK;//Choose mask mode.Accept when RxID & mask == ID.
-	  filterConfig.FilterBank  = 0; //The filter number. We can have 14 filters, 0-13.
-	  filterConfig.FilterScale = CAN_FILTERSCALE_32BIT; //Select one 32 bit filter, not 2 16 bit filters.
-	  filterConfig.FilterFIFOAssignment = CAN_FilterFIFO0; // Assign messages from this filter to FIFO 0;
-	  filterConfig.FilterMaskIdHigh = 0x0000; //MSB of filter mask. Choose 0xFFFF so that we accept all messages.
-	  filterConfig.FilterMaskIdLow = 0x0000; //LSB of filter mask. Choose 0xFFFF so that we accept all messages.
-	  filterConfig.FilterActivation = CAN_FILTER_ENABLE;
-
-	  HAL_StatusTypeDef stat = HAL_CAN_ConfigFilter(&hcan2, &filterConfig);
-//
-//	  //Set interrupt for rx.
-//	 stat =  HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING);
-//	 HAL_NVIC_SetPriority(CAN2_RX0_IRQn, configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY-1,0);
-//
-//	  //Start the can peripheral
-
-//
-//	  rxQueue = xQueueCreate(10,sizeof(can_frame_t));//Create queue for 10 can messages;
-
-	  if (HAL_CAN_RegisterCallback(&hcan2, HAL_CAN_RX_FIFO0_MSG_PENDING_CB_ID, can_irq)) {
-	      Error_Handler();
-	    }
-
+			hcan2.Instance = CAN1;
+		  CAN_FilterTypeDef filterConfig;
+		  filterConfig.FilterMode = CAN_FILTERMODE_IDMASK;//Choose mask mode.Accept when RxID & mask == ID.
+		  filterConfig.FilterBank  = 15; //The filter number. We can have 14 filters, 0-13.
+		  filterConfig.FilterScale = CAN_FILTERSCALE_32BIT; //Select one 32 bit filter, not 2 16 bit filters.
+		  filterConfig.FilterFIFOAssignment = CAN_FilterFIFO0; // Assign messages from this filter to FIFO 0;
+		  filterConfig.FilterMaskIdHigh = 0x0000; //MSB of filter mask. Choose 0xFFFF so that we accept all messages.
+		  filterConfig.FilterMaskIdLow = 0x0000; //LSB of filter mask. Choose 0xFFFF so that we accept all messages.
+//		  filterConfig.FilterIdHigh = 0;
+//		  filterConfig.FilterIdLow = 0x321;
+		  filterConfig.FilterActivation = CAN_FILTER_ENABLE;
+		  if(HAL_CAN_ConfigFilter(&hcan2, &filterConfig) != HAL_OK) {Error_Handler(); }
+		  hcan2.Instance = CAN2;
+		if (HAL_CAN_RegisterCallback(&hcan2, HAL_CAN_RX_FIFO0_MSG_PENDING_CB_ID, can_irq)) {
+					Error_Handler();
+				  }
+//	    hcan2.Instance->BTR |= CAN_BTR_LBKM|CAN_BTR_SILM; // set loopback mode.
+		hcan2.Instance->MCR &= ~(1<<16);
 	    if (HAL_CAN_Start(&hcan2) != HAL_OK) {
 	      Error_Handler();
 	    }
@@ -157,7 +150,7 @@ void startCAN(){
 	      Error_Handler();
 	    }
 
-//	    	  stat = HAL_CAN_Start(&hcan2);
+
 
 }
 
@@ -181,6 +174,9 @@ void sendMessageCAN(uint32_t id,uint8_t* data, uint8_t length){
 
 }
 
+void CAN2_RX0_IRQn_Handler(){
+	can_irq(&hcan2);
+}
 void can_irq(CAN_HandleTypeDef *pcan) {
   CAN_RxHeaderTypeDef msg;
   uint8_t data[8];
@@ -188,25 +184,26 @@ void can_irq(CAN_HandleTypeDef *pcan) {
   // do something
 
 }
-//void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan){
-//
-//	uint8_t rxData[8];
-//	CAN_RxHeaderTypeDef header;
-//
-//	HAL_CAN_GetRxMessage(hcan, 0, &header, rxData);
-//
-//	can_frame_t frame;
-//	frame.id=header.ExtId;
-//	frame.dlc = header.DLC;
-//
-//	for(int i=0; i<frame.dlc;i++){
-//		frame.data[i] = rxData[i];
-//	}
-//
-//	xQueueSendToBackFromISR(rxQueue,&frame,NULL);
-//
-//}
 
+void canTask(void * pvParams){
+
+	  char* data = "hello";
+	  CAN_TxHeaderTypeDef header;
+	  	header.ExtId = 0x15;
+	  	header.IDE = CAN_ID_EXT;
+	  	header.RTR = CAN_RTR_DATA;
+	  	header.DLC = 5;
+	while(1){
+
+
+
+		  	uint32_t mailbox;
+
+	//	  	sendMessageCAN(0x15,data,5);
+		  	HAL_CAN_AddTxMessage(&hcan2, &header, data, &mailbox);
+		  	vTaskDelay(1000);
+	}
+}
 /* USER CODE END 1 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
