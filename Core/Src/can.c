@@ -43,7 +43,8 @@ void MX_CAN2_Init(void)
   hcan2.Init.AutoRetransmission = DISABLE;
   hcan2.Init.ReceiveFifoLocked = DISABLE;
   hcan2.Init.TransmitFifoPriority = DISABLE;
-  if (HAL_CAN_Init(&hcan2) != HAL_OK)
+  HAL_StatusTypeDef res;
+  if (res =HAL_CAN_Init(&hcan2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -67,11 +68,18 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     __HAL_RCC_GPIOB_CLK_ENABLE();
     /**CAN2 GPIO Configuration
     PB13     ------> CAN2_TX
-    PB5     ------> CAN2_RX
+    PB12     ------> CAN2_RX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_5;
+    GPIO_InitStruct.Pin = GPIO_PIN_13;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF9_CAN2;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = GPIO_PIN_12;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF9_CAN2;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -201,6 +209,7 @@ void canTask(void * pvParams){
 
 	//	  	sendMessageCAN(0x15,data,5);
 		  	HAL_CAN_AddTxMessage(&hcan2, &header, data, &mailbox);
+//		  	int rx = HAL_CAN_GetRxFifoFillLevel(&hcan2, CAN_RX_FIFO0);
 		  	vTaskDelay(1000);
 	}
 }

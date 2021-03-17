@@ -91,9 +91,11 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
-  MX_CAN2_Init();
+
   /* USER CODE BEGIN 2 */
   HAL_CAN_MspInit(&hcan2);
+  MX_CAN2_Init();
+  startCAN();
   /* USER CODE END 2 */
 
   /* Init scheduler */
