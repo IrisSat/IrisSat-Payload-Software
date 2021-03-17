@@ -22,7 +22,7 @@
 
 /* USER CODE BEGIN 0 */
 void can_irq(CAN_HandleTypeDef *pcan);
-
+QueueHandle_t csp_rx_queue;
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan2;
@@ -149,6 +149,9 @@ void startCAN(){
 	    if (HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
 	      Error_Handler();
 	    }
+	    if (HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+	      Error_Handler();
+	    }
 
 
 
@@ -204,6 +207,50 @@ void canTask(void * pvParams){
 		  	vTaskDelay(1000);
 	}
 }
+
+int can_init(uint32_t id, uint32_t mask, struct csp_can_config *conf){
+	csp_rx_queue = get_csp_can_queue();
+
+
+	return 0;
+
+}
+
+int can_send(can_id_t id, uint8_t * data, uint8_t dlc){
+
+	CAN_TxHeaderTypeDef header;
+
+	int i, tries = 0;
+
+	if (dlc > 8)
+		return -1;
+
+
+  	header.ExtId = id;
+  	header.IDE = CAN_ID_EXT;
+  	header.RTR = CAN_RTR_DATA;
+  	header.DLC = dlc;
+
+	/* Send frame */
+
+  	uint32_t mailbox;
+	uint8_t transmit_complete=0;
+	while(!transmit_complete){
+
+		if(HAL_CAN_GetTxMailboxesFreeLevel(&hcan2)>0){
+
+		transmit_complete = HAL_CAN_AddTxMessage(&hcan2, &header, data, &mailbox);;
+
+
+		}
+		else{
+			csp_sleep_ms(10);
+		}
+	}
+
+	return 0;
+}
+
 /* USER CODE END 1 */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

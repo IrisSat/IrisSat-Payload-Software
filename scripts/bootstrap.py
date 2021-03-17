@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser()
 
 # Options:
 parser.add_argument("--debug", dest="is_debug", default=False, help="Enable debug build")
+parser.add_argument("--toolchain",dest="usr_tools",default="",help="path to the compiler tools",type=str)
 
 # Parse arguments
 args = parser.parse_args()
@@ -33,10 +34,15 @@ libraries_path = "./Libraries"
 # Environment variables
 import utils
 
-if utils.is_windows:
+if args.usr_tools != "":
+    os.environ['AR'] = os.path.join(args.usr_tools, 'arm-none-eabi-ar.exe')
+    os.environ['CC'] = os.path.join(args.usr_tools, 'arm-none-eabi-gcc.exe')
+    os.environ['CXX'] = os.path.join(args.usr_tools, 'arm-none-eabi-g++.exe')
+
+elif utils.is_windows:
     import glob
     #print(os.listdir('C:/ST/STM32CubeIDE_1.5.1/STM32CubeIDE/plugins'))
-    stm_toolchain_glob = glob.glob("C:/ST/STM32CubeIDE_1.5.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.7-2018-q2-update.win32_1.5.0.202011040924/tools/bin",recursive=True)
+    stm_toolchain_glob = glob.glob("**/ST/STM32CubeIDE_1.5.1/STM32CubeIDE/plugins/*/tools/bin",recursive=True)
     print(stm_toolchain_glob)
 
     if stm_toolchain_glob:
@@ -138,7 +144,7 @@ try:
     INCLUDES += f"{project_path}/Middlewares/Third_Party/FreeRTOS/Source/portable,"
     INCLUDES += f"{project_path}/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM7/r0p1,"
 
-    os.environ["CFLAGS"] = f"-Wall -std=gnu11 {optimization_flags} -mcpu=cortex-m7 -mthumb"
+    os.environ["CFLAGS"] = f"-Wall -std=gnu11 {optimization_flags} -mcpu=cortex-m7 -mthumb -mfloat-abi=hard"
 
     os.chdir(f"{libraries_path}/libcsp")
     print("configuring...")
