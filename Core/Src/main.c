@@ -104,6 +104,7 @@ int main(void)
   MX_CAN2_Init();
   /* USER CODE BEGIN 2 */
   HAL_CAN_MspInit(&hcan2);
+  startCAN();
 
   BaseType_t status;
 #ifdef SERVER
