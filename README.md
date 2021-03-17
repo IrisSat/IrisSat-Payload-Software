@@ -4,6 +4,16 @@ Software for IrisSat Payload Controller.
 ## Building and Running
 
 The project is setup for the STM32CubeIDE.
+
+Before building the project, you must run the build script to download and build libcsp, which implements the Cubesat Space Protocol library used on IrisSat.
+Open powershell in the script/ folder.
+Type: "python ./bootstrap.py"
+
+If you encounter errors about gcc not being executable or missing, then you can pass in alink to the compiler tools.
+These would be somewhere like C:/ST/STM32CubeIDE_1.5.1/STM32CubeIDE/plugins/\*.mcu.externaltools.gnu-tools-for-stm32\*/tools/bin.
+So you would have to pass that path (to the bin folder) to the program, like: "python ./bootstrap.py --toolchain "path to toolchain""
+
+
 Build the porject by clicking the "hammer" icon in the top toolbar, or by right clicking the project in the Project Explorer and selecting "Build Project".
 
 The project can be run by connecting the debugger, and then clicking the debug symbol in the top toolbar.
