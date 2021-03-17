@@ -284,9 +284,13 @@ int can_send(can_id_t id, uint8_t * data, uint8_t dlc){
 		if(HAL_CAN_GetTxMailboxesFreeLevel(&hcan2)>0){
 
 		transmit_complete = HAL_CAN_AddTxMessage(&hcan2, &header, data, &mailbox);
+
+		//This wait is required, otherwise packets can be sent out of order, causing issues at this point.
 		while(HAL_CAN_IsTxMessagePending(&hcan2, mailbox)){
 			//Just wait for message to be sent.
 		}
+
+
 		if(transmit_complete == HAL_OK) transmit_complete = 1;
 
 		}
