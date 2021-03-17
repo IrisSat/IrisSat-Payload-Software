@@ -42,7 +42,7 @@ if args.usr_tools != "":
 elif utils.is_windows:
     import glob
     #print(os.listdir('C:/ST/STM32CubeIDE_1.5.1/STM32CubeIDE/plugins'))
-    stm_toolchain_glob = glob.glob("**/ST/STM32CubeIDE_1.5.1/STM32CubeIDE/plugins/*/tools/bin",recursive=True)
+    stm_toolchain_glob = glob.glob("C:/ST/STM32CubeIDE_1.5.1/STM32CubeIDE/plugins/*mcu.externaltools.gnu-tools-for-stm32*/tools/bin",recursive=True)
     print(stm_toolchain_glob)
 
     if stm_toolchain_glob:
