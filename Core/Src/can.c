@@ -69,7 +69,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     PB13     ------> CAN2_TX
     PB5     ------> CAN2_RX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_5;
+    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_12;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -181,9 +181,25 @@ void CAN2_RX0_IRQn_Handler(){
 	can_irq(&hcan2);
 }
 void can_irq(CAN_HandleTypeDef *pcan) {
+
   CAN_RxHeaderTypeDef msg;
   uint8_t data[8];
+
+  ///Get the messag from the CAN peripheral.
   HAL_CAN_GetRxMessage(pcan, CAN_RX_FIFO0, &msg, data);
+
+  //Copy the message into the proper format.
+  static can_frame_t q_buf;
+
+  q_buf.id = msg.ExtId;
+  q_buf.dlc = msg.DLC;
+
+  for(int ix=0; ix<q_buf.dlc;ix++){
+	  q_buf.data[ix] = data[ix];
+  }
+
+  xQueueSendToBackFromISR(csp_rx_queue, &q_buf, NULL);
+
   // do something
 
 }
@@ -211,6 +227,34 @@ void canTask(void * pvParams){
 int can_init(uint32_t id, uint32_t mask, struct csp_can_config *conf){
 	csp_rx_queue = get_csp_can_queue();
 
+	hcan2.Instance = CAN1;
+  CAN_FilterTypeDef filterConfig;
+  filterConfig.FilterMode = CAN_FILTERMODE_IDMASK;//Choose mask mode.Accept when RxID & mask == ID.
+  filterConfig.FilterBank  = 15; //The filter number. We can have 14 filters, 0-13.
+  filterConfig.FilterScale = CAN_FILTERSCALE_32BIT; //Select one 32 bit filter, not 2 16 bit filters.
+  filterConfig.FilterFIFOAssignment = CAN_FilterFIFO0; // Assign messages from this filter to FIFO 0;
+  filterConfig.FilterMaskIdHigh = 0x0000; //MSB of filter mask. Choose 0xFFFF so that we accept all messages.
+  filterConfig.FilterMaskIdLow = 0x0000; //LSB of filter mask. Choose 0xFFFF so that we accept all messages.
+//		  filterConfig.FilterIdHigh = 0;
+//		  filterConfig.FilterIdLow = 0x321;
+  filterConfig.FilterActivation = CAN_FILTER_ENABLE;
+  if(HAL_CAN_ConfigFilter(&hcan2, &filterConfig) != HAL_OK) {Error_Handler(); }
+  hcan2.Instance = CAN2;
+if (HAL_CAN_RegisterCallback(&hcan2, HAL_CAN_RX_FIFO0_MSG_PENDING_CB_ID, can_irq)) {
+			Error_Handler();
+		  }
+//	    hcan2.Instance->BTR |= CAN_BTR_LBKM|CAN_BTR_SILM; // set loopback mode.
+hcan2.Instance->MCR &= ~(1<<16);
+if (HAL_CAN_Start(&hcan2) != HAL_OK) {
+  Error_Handler();
+}
+
+if (HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+  Error_Handler();
+}
+if (HAL_CAN_ActivateNotification(&hcan2, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK) {
+  Error_Handler();
+}
 
 	return 0;
 
@@ -239,8 +283,11 @@ int can_send(can_id_t id, uint8_t * data, uint8_t dlc){
 
 		if(HAL_CAN_GetTxMailboxesFreeLevel(&hcan2)>0){
 
-		transmit_complete = HAL_CAN_AddTxMessage(&hcan2, &header, data, &mailbox);;
-
+		transmit_complete = HAL_CAN_AddTxMessage(&hcan2, &header, data, &mailbox);
+		while(HAL_CAN_IsTxMessagePending(&hcan2, mailbox)){
+			//Just wait for message to be sent.
+		}
+		if(transmit_complete == HAL_OK) transmit_complete = 1;
 
 		}
 		else{
