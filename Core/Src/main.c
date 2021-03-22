@@ -32,6 +32,8 @@
 #include <csp/csp.h>
 #include "csp/interfaces/csp_if_can.h"
 
+#include "application.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -108,15 +110,15 @@ int main(void)
 //  startCAN();
 
   BaseType_t status;
-#ifdef SERVER
-    status = xTaskCreate(vTestCspServer,
-                         "Test CSP Server",
-                         160,
-                         NULL,
-                         1,
-                         NULL);
-
-#endif
+//#ifdef SERVER
+//    status = xTaskCreate(vTestCspServer,
+//                         "Test CSP Server",
+//                         160,
+//                         NULL,
+//                         1,
+//                         NULL);
+//
+//#endif
 
 #ifdef CLIENT
     status = xTaskCreate(vTestCspClient,
@@ -128,6 +130,14 @@ int main(void)
 
 
 #endif
+
+    xTaskCreate(commandHandler,
+                             "Test cmd",
+                             160,
+                             NULL,
+                             1,
+                             NULL);
+
 
   /* USER CODE END 2 */
 
@@ -146,29 +156,29 @@ int main(void)
     /* USER CODE END WHILE */
 
 
-	  if (HAL_ADC_Start(&hadc1) != HAL_OK)
-	  {
-	      /* Start Conversation Error */
-	      // Error_Handler();
-	  }
-	  if (HAL_ADC_PollForConversion(&hadc1, 500) != HAL_OK)
-	  {
-	      /* End Of Conversion flag not set on time */
-	      // Error_Handler();
-	      ADCValue=-1;
-	  }
-	  else
-	  {
-	      /* ADC conversion completed */
-	      /*##-5- Get the converted value of regular channel ########################*/
-	      ADCValue = HAL_ADC_GetValue(&hadc1);
-	      double voltage = ((double)ADCValue/4096*3 -1.5)/1.09;
-	      double resistance = ((30000-20000*voltage)/(30000+20000*voltage) )* 10000; //(10000*(0.5-voltage/3))/(0.5+voltage/3);
-	      temperatures[count] =  1/(9.02e-4 + 2.49e-4*log(resistance)+2.01e-7*pow(log(resistance),3)) - 273.15;
-	      count = (count+1)%60;
-	  }
-	  HAL_ADC_Stop(&hadc1);
-	 HAL_Delay(600);
+//	  if (HAL_ADC_Start(&hadc1) != HAL_OK)
+//	  {
+//	      /* Start Conversation Error */
+//	      // Error_Handler();
+//	  }
+//	  if (HAL_ADC_PollForConversion(&hadc1, 500) != HAL_OK)
+//	  {
+//	      /* End Of Conversion flag not set on time */
+//	      // Error_Handler();
+//	      ADCValue=-1;
+//	  }
+//	  else
+//	  {
+//	      /* ADC conversion completed */
+//	      /*##-5- Get the converted value of regular channel ########################*/
+//	      ADCValue = HAL_ADC_GetValue(&hadc1);
+//	      double voltage = ((double)ADCValue/4096*3 -1.5)/1.09;
+//	      double resistance = ((30000-20000*voltage)/(30000+20000*voltage) )* 10000; //(10000*(0.5-voltage/3))/(0.5+voltage/3);
+//	      temperatures[count] =  1/(9.02e-4 + 2.49e-4*log(resistance)+2.01e-7*pow(log(resistance),3)) - 273.15;
+//	      count = (count+1)%60;
+//	  }
+//	  HAL_ADC_Stop(&hadc1);
+//	 HAL_Delay(600);
     
     /* USER CODE BEGIN 3 */
   }
