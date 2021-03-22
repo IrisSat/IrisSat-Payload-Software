@@ -21,11 +21,16 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "adc.h"
+#include "can.h"
 #include "gpio.h"
-#include "math.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
+#include <stdio.h>
+
+#include <csp/csp.h>
+#include "csp/interfaces/csp_if_can.h"
 
 /* USER CODE END Includes */
 
@@ -54,11 +59,16 @@ void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 int test(int a, int b);
+static void vTestCspServer(void * pvParameters);
+static void vTestCspClient(void * pvParameters);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+//Un-comment one, to run the CSP client or server task.
+//#define CLIENT
+#define SERVER
 /* USER CODE END 0 */
 
 /**
@@ -91,27 +101,50 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
+
   /* USER CODE BEGIN 2 */
-  double temp;
-  double resistance;
+  HAL_CAN_MspInit(&hcan2);
+  MX_CAN2_Init();
+//  startCAN();
+
+  BaseType_t status;
+#ifdef SERVER
+    status = xTaskCreate(vTestCspServer,
+                         "Test CSP Server",
+                         160,
+                         NULL,
+                         1,
+                         NULL);
+
+#endif
+
+#ifdef CLIENT
+    status = xTaskCreate(vTestCspClient,
+                         "Test CSP Client",
+                         160,
+                         NULL,
+                         1,
+                         NULL);
+
+
+#endif
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();
   /* Start scheduler */
-  //osKernelStart();
- //HAL_ADC_Start(&hadc1);
+  osKernelStart();
+
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  uint32_t ADCValue;
 
-  double temperatures[60];
-  int count = 0;
   while (1)
   {
     /* USER CODE END WHILE */
+
 
 	  if (HAL_ADC_Start(&hadc1) != HAL_OK)
 	  {
@@ -136,6 +169,7 @@ int main(void)
 	  }
 	  HAL_ADC_Stop(&hadc1);
 	 HAL_Delay(600);
+    
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -195,6 +229,87 @@ int test(int a, int b){
 
 	return a+b;
 }
+
+static void vTestCspServer(void * pvParameters){
+
+	struct csp_can_config can_conf;
+	can_conf.bitrate=250000;
+	can_conf.clock_speed=250000;
+	can_conf.ifc = "CAN";
+
+	/* Init buffer system with 5 packets of maximum 256 bytes each */
+	int resp = csp_buffer_init(5, 256);//The 256 number is from the MTU of the CAN interface.
+
+	/* Init CSP with address 0 */
+	resp = csp_init(0);
+
+	/* Init the CAN interface with hardware filtering */
+	resp = csp_can_init(CSP_CAN_MASKED, &can_conf);
+
+	/* Setup default route to CAN interface */
+	resp = csp_rtable_set(CSP_DEFAULT_ROUTE,0, &csp_if_can,CSP_NODE_MAC);
+
+	size_t freSpace = xPortGetFreeHeapSize();
+	/* Start router task with 100 word stack, OS task priority 1 */
+	resp = csp_route_start_task(100, 1);
+
+
+	csp_conn_t * conn = NULL;
+	csp_packet_t * packet= NULL;
+	csp_socket_t * socket = csp_socket(0);
+	csp_bind(socket, CSP_ANY);
+	csp_listen(socket,4);
+
+	while(1) {
+
+			conn = csp_accept(socket, 1000);
+			if(conn){
+				packet = csp_read(conn,0);
+				//prvUARTSend(&g_mss_uart0, packet->data, packet->length);
+				//printf(“%S\r\n”, packet->data);
+				csp_buffer_free(packet);
+				csp_close(conn);
+			}
+	}
+}
+/*-----------------------------------------------------------*/
+static void vTestCspClient(void * pvParameters){
+
+	struct csp_can_config can_conf;
+	can_conf.bitrate=250000;
+	can_conf.clock_speed=250000;
+	can_conf.ifc = "CAN";
+
+	/* Init buffer system with 5 packets of maximum 256 bytes each */
+	int res = csp_buffer_init(5, 256);//The 256 number is from the MTU of the CAN interface.
+
+	/* Init CSP with address 1 */
+	res = csp_init(1);
+
+	/* Init the CAN interface with hardware filtering */
+	res = csp_can_init(CSP_CAN_MASKED, &can_conf);
+
+	/* Setup address 0 to route to CAN interface */
+	res = csp_rtable_set(0,0, &csp_if_can,0);
+
+	size_t freSpace = xPortGetFreeHeapSize();
+	/* Start router task with 100 word stack, OS task priority 1 */
+	res = csp_route_start_task(100, 1);
+
+
+	while(1){
+		csp_conn_t * conn;
+		csp_packet_t * packet;
+		conn = csp_connect(2,0,4,1000,0);	//Create a connection. This tells CSP where to send the data (address and destination port).
+		packet = csp_buffer_get(sizeof("TEST0 World")); // Get a buffer large enough to fit our data. Max size is 256.
+		sprintf(packet->data,"TEST0 World");
+		packet->length=strlen("TEST0 World");
+		csp_send(conn,packet,0);
+		csp_close(conn);
+		vTaskDelay(10000);
+	}
+}
+
 
 /* USER CODE END 4 */
 
