@@ -23,6 +23,7 @@
 #include "adc.h"
 #include "can.h"
 #include "gpio.h"
+#include "fmc.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -63,6 +64,7 @@ void MX_FREERTOS_Init(void);
 int test(int a, int b);
 static void vTestCspServer(void * pvParameters);
 static void vTestCspClient(void * pvParameters);
+void vTestMemory(void * pvParams);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -70,7 +72,7 @@ static void vTestCspClient(void * pvParameters);
 
 //Un-comment one, to run the CSP client or server task.
 //#define CLIENT
-#define SERVER
+//#define SERVER
 /* USER CODE END 0 */
 
 /**
@@ -103,22 +105,23 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
-
-  /* USER CODE BEGIN 2 */
-  HAL_CAN_MspInit(&hcan2);
   MX_CAN2_Init();
+  MX_FMC_Init();
+  /* USER CODE BEGIN 2 */
+//  HAL_CAN_MspInit(&hcan2);
+//  MX_CAN2_Init();
 //  startCAN();
 
   BaseType_t status;
-//#ifdef SERVER
-//    status = xTaskCreate(vTestCspServer,
-//                         "Test CSP Server",
-//                         160,
-//                         NULL,
-//                         1,
-//                         NULL);
-//
-//#endif
+#ifdef SERVER
+    status = xTaskCreate(vTestCspServer,
+                         "Test CSP Server",
+                         160,
+                         NULL,
+                         1,
+                         NULL);
+
+#endif
 
 #ifdef CLIENT
     status = xTaskCreate(vTestCspClient,
@@ -131,13 +134,23 @@ int main(void)
 
 #endif
 
-    xTaskCreate(commandHandler,
-                             "Test cmd",
-                             160,
-                             NULL,
-                             1,
-                             NULL);
 
+
+    //Test the external Flash memory:
+
+//    uint32_t* a_ptr = 0x80000000;
+//    *a_ptr = 10;
+//    uint32_t b = *a_ptr;
+
+
+//    xTaskCreate(commandHandler,
+//                             "Test cmd",
+//                             160,
+//                             NULL,
+//                             1,
+//                             NULL);
+
+    BaseType_t state = xTaskCreate(vTestMemory,"test mem", 10000,NULL,1,NULL);
 
   /* USER CODE END 2 */
 
@@ -155,32 +168,8 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-
-//	  if (HAL_ADC_Start(&hadc1) != HAL_OK)
-//	  {
-//	      /* Start Conversation Error */
-//	      // Error_Handler();
-//	  }
-//	  if (HAL_ADC_PollForConversion(&hadc1, 500) != HAL_OK)
-//	  {
-//	      /* End Of Conversion flag not set on time */
-//	      // Error_Handler();
-//	      ADCValue=-1;
-//	  }
-//	  else
-//	  {
-//	      /* ADC conversion completed */
-//	      /*##-5- Get the converted value of regular channel ########################*/
-//	      ADCValue = HAL_ADC_GetValue(&hadc1);
-//	      double voltage = ((double)ADCValue/4096*3 -1.5)/1.09;
-//	      double resistance = ((30000-20000*voltage)/(30000+20000*voltage) )* 10000; //(10000*(0.5-voltage/3))/(0.5+voltage/3);
-//	      temperatures[count] =  1/(9.02e-4 + 2.49e-4*log(resistance)+2.01e-7*pow(log(resistance),3)) - 273.15;
-//	      count = (count+1)%60;
-//	  }
-//	  HAL_ADC_Stop(&hadc1);
-//	 HAL_Delay(600);
-    
     /* USER CODE BEGIN 3 */
+
   }
   /* USER CODE END 3 */
 }
@@ -276,7 +265,7 @@ static void vTestCspServer(void * pvParameters){
 			if(conn){
 				packet = csp_read(conn,0);
 				//prvUARTSend(&g_mss_uart0, packet->data, packet->length);
-				//printf(“%S\r\n”, packet->data);
+				//printf(“%S\r\n�?, packet->data);
 				csp_buffer_free(packet);
 				csp_close(conn);
 			}
@@ -320,6 +309,71 @@ static void vTestCspClient(void * pvParameters){
 	}
 }
 
+
+
+void vTestMemory(void * pvParams){
+
+	//Write Protect Pin should be high.
+	HAL_GPIO_WritePin(FLASH_WP_GPIO_Port, FLASH_WP_Pin, 1);
+	HAL_NAND_Reset(&hnand1);
+
+	NAND_IDTypeDef nandInfo;
+
+	//For reference, the W29N02GV id:
+//	nandInfo.Device_Id = 0xDA;
+//	nandInfo.Maker_Id = 0xEF;
+//	nandInfo.Third_Id=90;
+//	nandInfo.Fourth_Id =95;
+
+    NAND_AddressTypeDef addr;
+    addr.Block = 0;
+    addr.Page = 0;
+    addr.Plane = 0;
+
+	HAL_NAND_Erase_Block(&hnand1, &addr);
+	HAL_StatusTypeDef res =  HAL_NAND_Read_ID(&hnand1,&nandInfo);
+
+	uint8_t testBuff [hnand1.Config.PageSize];
+	uint8_t testBuffRx [hnand1.Config.PageSize];
+
+
+
+
+
+	while(1){
+
+		    for(int i=0; i< hnand1.Config.PageSize; i++){
+
+		    	testBuff[i] = i%256;
+		    	testBuffRx[i]= 0 ;
+		    }
+
+
+
+
+		    HAL_NAND_Read_Page_8b(&hnand1, &addr, testBuffRx, 1);
+		    HAL_NAND_Write_Page_8b(&hnand1, &addr, testBuff, 1);
+//		    HAL_NAND_StateTypeDef state =  HAL_NAND_GetState(&hnand1);
+		    HAL_NAND_Read_Page_8b(&hnand1, &addr, testBuffRx, 1);
+
+
+		    uint16_t good = 0;
+		    for(int i=0; i<hnand1.Config.PageSize; i++){
+
+		    	if(testBuffRx[i] != testBuff[i]){
+		    		good ++;
+
+		    	}
+
+		    }
+		    HAL_NAND_Address_Inc(&hnand1, &addr);
+		    if(addr.Block == 2048 && addr.Page == 64){
+		    	uint8_t a = 0;
+		    	uint8_t b = 1+a;
+		    }
+		vTaskDelay(pdMS_TO_TICKS(5));
+	}
+}
 
 /* USER CODE END 4 */
 
