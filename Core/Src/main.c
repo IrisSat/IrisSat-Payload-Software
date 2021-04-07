@@ -35,6 +35,9 @@
 
 #include "application.h"
 
+#include "flash.h"
+
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -313,64 +316,90 @@ static void vTestCspClient(void * pvParameters){
 
 void vTestMemory(void * pvParams){
 
-	//Write Protect Pin should be high.
-	HAL_GPIO_WritePin(FLASH_WP_GPIO_Port, FLASH_WP_Pin, 1);
-	HAL_NAND_Reset(&hnand1);
-
-	NAND_IDTypeDef nandInfo;
-
-	//For reference, the W29N02GV id:
-//	nandInfo.Device_Id = 0xDA;
-//	nandInfo.Maker_Id = 0xEF;
-//	nandInfo.Third_Id=90;
-//	nandInfo.Fourth_Id =95;
-
-    NAND_AddressTypeDef addr;
-    addr.Block = 0;
-    addr.Page = 0;
-    addr.Plane = 0;
-
-	HAL_NAND_Erase_Block(&hnand1, &addr);
-	HAL_StatusTypeDef res =  HAL_NAND_Read_ID(&hnand1,&nandInfo);
-
-	uint8_t testBuff [hnand1.Config.PageSize];
-	uint8_t testBuffRx [hnand1.Config.PageSize];
-
-
+//	//Write Protect Pin should be high.
+//	HAL_GPIO_WritePin(FLASH_WP_GPIO_Port, FLASH_WP_Pin, 1);
+//	HAL_NAND_Reset(&hnand1);
+//
+//	NAND_IDTypeDef nandInfo;
+//
+//	//For reference, the W29N02GV id:
+////	nandInfo.Device_Id = 0xDA;
+////	nandInfo.Maker_Id = 0xEF;
+////	nandInfo.Third_Id=90;
+////	nandInfo.Fourth_Id =95;
+//
+//    NAND_AddressTypeDef addr;
+//    addr.Block = 2047;
+//    addr.Page = 0;
+//    addr.Plane = 0;
+//
+//	HAL_NAND_Erase_Block(&hnand1, &addr);
+//	HAL_StatusTypeDef res =  HAL_NAND_Read_ID(&hnand1,&nandInfo);
+//
+//	uint8_t testBuff [hnand1.Config.PageSize];
+//	uint8_t testBuffRx [hnand1.Config.PageSize];
 
 
+
+int result = initFlash();
+eraseFlashDevice();
+
+	//Image is too big to fit in ram, so split into chunks of 5*2048.
+	uint8_t imageDataPart[5*2048];
+	uint16_t imageNumParts = 375; //375*5*2048  = 3.84Mb,
+
+	uint8_t imageRxPart [5*2048];
+
+	for(int j=0; j<5; j++){
+		for(int i=0; i< hnand1.Config.PageSize; i++){
+
+			imageDataPart[i+j*2048] = j;
+			imageRxPart[i+j*2048]= 0 ;
+		}
+	}
+
+	long error = 0; //Error count, this should be 0 at the end of the test.
+	uint16_t imgCount =0;
+	uint32_t currAddr=0;
 
 	while(1){
 
-		    for(int i=0; i< hnand1.Config.PageSize; i++){
+		//Write an image;
 
-		    	testBuff[i] = i%256;
-		    	testBuffRx[i]= 0 ;
-		    }
+		for(int i=0; i< imageNumParts; i++){
+
+			int8_t res = writeFlash(imageDataPart,currAddr + i*5,5);
+			if(res != 1){
+				while(1){}
+			}
+		}
+
+		//Read the image;
+
+		for(int i=0; i< imageNumParts; i++){
+
+			int8_t res = readFlash(imageRxPart,currAddr + i*5,5);
+			if(res != 1){
+				while(1){}
+			}
+
+			for(int j=0; j<5; j++){
+				for(int i=0; i< hnand1.Config.PageSize; i++){
+
+					if(imageRxPart[i+j*2048] != j){
+						error ++;
+					}
+					}
+
+				}
+			}
+
+		//Clear Rx Buffer, just to be sure.
+		memset(imageRxPart,0,5*2048);
+		imgCount++;
+		currAddr += imageNumParts*5;
 
 
-
-
-		    HAL_NAND_Read_Page_8b(&hnand1, &addr, testBuffRx, 1);
-		    HAL_NAND_Write_Page_8b(&hnand1, &addr, testBuff, 1);
-//		    HAL_NAND_StateTypeDef state =  HAL_NAND_GetState(&hnand1);
-		    HAL_NAND_Read_Page_8b(&hnand1, &addr, testBuffRx, 1);
-
-
-		    uint16_t good = 0;
-		    for(int i=0; i<hnand1.Config.PageSize; i++){
-
-		    	if(testBuffRx[i] != testBuff[i]){
-		    		good ++;
-
-		    	}
-
-		    }
-		    HAL_NAND_Address_Inc(&hnand1, &addr);
-		    if(addr.Block == 2048 && addr.Page == 64){
-		    	uint8_t a = 0;
-		    	uint8_t b = 1+a;
-		    }
 		vTaskDelay(pdMS_TO_TICKS(5));
 	}
 }
