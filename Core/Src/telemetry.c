@@ -51,3 +51,30 @@ void sendTelemetry(telemetryPacket_t * packet){
 				csp_buffer_free(outPacket);
 			}
 }
+
+void sendTelemetry_direct(telemetryPacket_t * packet,csp_conn_t * conn){
+
+			//csp_conn_t * conn;
+			csp_packet_t * outPacket;
+			//conn = csp_connect(2,addr,CSP_CMD_PORT,1000,0);	//Create a connection. This tells CSP where to send the data (address and destination port).
+			outPacket = csp_buffer_get(TELEM_HEADER_SIZE+packet->length);
+
+			memcpy(&outPacket->data[0],&packet->timestamp,sizeof(Calendar_t));
+			memcpy(&outPacket->data[sizeof(Calendar_t)],&packet->telem_id,1);
+			memcpy(&outPacket->data[sizeof(Calendar_t)+1],&packet->length,1);
+
+			//Only do this if there is data.
+			if(packet->length){
+				memcpy(&outPacket->data[sizeof(Calendar_t)+2],packet->data,packet->length);
+			}
+
+			outPacket->length = TELEM_HEADER_SIZE + packet->length;
+
+			int good = csp_send(conn,outPacket,0);
+			csp_close(conn);
+
+			if(!good){
+
+				csp_buffer_free(outPacket);
+			}
+}

@@ -108,11 +108,11 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_ADC1_Init();
-  MX_CAN2_Init();
+//  MX_CAN2_Init();
   MX_FMC_Init();
   /* USER CODE BEGIN 2 */
-//  HAL_CAN_MspInit(&hcan2);
-//  MX_CAN2_Init();
+  HAL_CAN_MspInit(&hcan2);
+  MX_CAN2_Init();
 //  startCAN();
 
   BaseType_t status;
@@ -146,14 +146,14 @@ int main(void)
 //    uint32_t b = *a_ptr;
 
 
-//    xTaskCreate(commandHandler,
-//                             "Test cmd",
-//                             160,
-//                             NULL,
-//                             1,
-//                             NULL);
+    xTaskCreate(commandHandler,
+                             "cmdHandler",
+                             1000,
+                             NULL,
+                             1,
+                             NULL);
 
-    BaseType_t state = xTaskCreate(vTestMemory,"test mem", 10000,NULL,1,NULL);
+//    BaseType_t state = xTaskCreate(vTestMemory,"test mem", 10000,NULL,1,NULL);
 
   /* USER CODE END 2 */
 

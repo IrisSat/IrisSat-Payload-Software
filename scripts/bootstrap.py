@@ -11,7 +11,7 @@ import argparse
 parser = argparse.ArgumentParser()
 
 # Options:
-parser.add_argument("--debug", dest="is_debug", default=False, help="Enable debug build")
+parser.add_argument("--debug", dest="is_debug", default=True, help="Enable debug build")
 parser.add_argument("--toolchain",dest="usr_tools",default="",help="path to the compiler tools",type=str)
 
 # Parse arguments
@@ -131,7 +131,7 @@ import utils
 ################################################################
 # libcsp
 print("Downloading libcsp...")
-version_libcsp = "track-c9c177e" # tracks c9c177e commit of upstream with an additional bug fix for get_csp_can_queue
+version_libcsp = "track-8faf353" # tracks c9c177e commit of upstream with an additional bug fix for get_csp_can_queue track-8faf353
 utils.download_git_branch(version_libcsp, " https://github.com/IrisSat/libcsp", libraries_path, "libcsp")
 
 print("Building libcsp...")
@@ -148,7 +148,7 @@ try:
 
     os.chdir(f"{libraries_path}/libcsp")
     print("configuring...")
-    subprocess.run(f'python waf configure --toolchain=arm-none-eabi- --enable-if-can --with-os=freertos --includes="{INCLUDES}  "', shell=True, check=True)
+    subprocess.run(f'python waf configure --toolchain=arm-none-eabi- --enable-if-can --with-os=freertos --includes="{INCLUDES}"', shell=True, check=True)
     print("building...")
     subprocess.run('python waf build', shell=True, check=True)
 

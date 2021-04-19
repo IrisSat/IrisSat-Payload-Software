@@ -11,12 +11,15 @@
 #include "cmsis_os.h"
 #include <csp/csp.h>
 #include "csp/interfaces/csp_if_can.h"
+#include "flash.h"
+#include <math.h>
 
-void handleCommand(telemetryPacket_t* command);
+void handleCommand(telemetryPacket_t* command,csp_conn_t * connection);
+void rx_image(uint8_t * chunk,uint16_t size,uint16_t num);
 
 void commandHandler(void * pvparams){
 
-	struct csp_can_config can_conf;
+		struct csp_can_config can_conf;
 		can_conf.bitrate=250000;
 		can_conf.clock_speed=250000;
 		can_conf.ifc = "CAN";
@@ -35,7 +38,7 @@ void commandHandler(void * pvparams){
 
 		size_t freSpace = xPortGetFreeHeapSize();
 		/* Start router task with 100 word stack, OS task priority 1 */
-		resp = csp_route_start_task(100, 1);
+		resp = csp_route_start_task(400, 1);
 
 	csp_conn_t * conn = NULL;
 	csp_packet_t * packet= NULL;
@@ -44,21 +47,35 @@ void commandHandler(void * pvparams){
 	csp_listen(socket,4);
 
 	while(1){
-
+//		freSpace = xPortGetFreeHeapSize();
 		conn = csp_accept(socket, 1000);
 		if(conn){
 			packet = csp_read(conn,0);
 
-			//This is a command
-			if(packet->id.src==CDH_CSP_ADDRESS && packet->id.dport ==CSP_CMD_PORT){
+            //Handle the message based on the port it was sent to.
+            int dest_port = csp_conn_dport(conn);
 
-					telemetryPacket_t command;
-					unpackTelemetry(packet->data, &command);
+            switch(dest_port){
 
-					handleCommand(&command);
-			}
+            case CSP_CMD_PORT:{
+							telemetryPacket_t command;
+							unpackTelemetry(packet->data, &command);
 
-			csp_buffer_free(packet);
+							handleCommand(&command,conn);
+                    //xQueueSendToBack(queues->command_queue,packet->data,100);
+                    break;
+            }
+
+            case CSP_TELEM_PORT:
+                    //xQueueSendToBack(queues->data_queue,packet->data,100);
+                    break;
+
+                default:
+                    csp_service_handler(conn,packet);
+                    break;
+            }
+            //Should buffer free be here? Example doesn't call this after csp_service handler.
+            csp_buffer_free(packet);
 			csp_close(conn);
 		}
 
@@ -67,7 +84,7 @@ void commandHandler(void * pvparams){
 
 }
 
-void handleCommand(telemetryPacket_t* command){
+void handleCommand(telemetryPacket_t* command,csp_conn_t * connection){
 
 	switch(command->telem_id){
 
@@ -138,12 +155,70 @@ void handleCommand(telemetryPacket_t* command){
 
 			break;
 		}
+		case PAYLOAD_FULL_IMAGE_RX:{
 
+
+			uint16_t imgChunkNum = *((uint16_t*)&command->data[0]);
+			uint16_t chunkLen = command->length-sizeof(uint16_t);
+
+			rx_image(&command->data[2],chunkLen,imgChunkNum);
+
+
+			//Send ACK.
+			telemetryPacket_t telemetry={0};
+			telemetry.telem_id= PAYLOAD_ACK;
+			telemetry.timestamp = command->timestamp;
+			*((uint16_t*)&telemetry.data[0]) =imgChunkNum;
+			telemetry.length = 2;
+			sendTelemetry_direct(&telemetry,connection);
+			break;
+		}
 		default:
 
 			break;
 
 
 	}
+
+}
+
+uint8_t imgBuff[2048];
+uint16_t imgBuffIdx =0;
+
+void rx_image(uint8_t * chunk,uint16_t size,uint16_t num){
+
+	static int imgNum = 0;
+	static int state = 0;
+	static uint16_t numChunks =0;
+	static uint32_t flashAddr = 0;
+
+	//For the first chunk save the chunk num since it is the length.
+	if(state ==0){
+		state = 1;
+		numChunks = num;
+	}
+
+	if(state == 1){
+
+		memcpy(&imgBuff[imgBuffIdx],chunk,size);
+		imgBuffIdx += size;
+
+		if(imgBuffIdx == 2048){
+
+			writeFlash(imgBuff, flashAddr, 1);
+			flashAddr ++;
+			imgBuffIdx = 0;
+
+		}
+		else if(num == 0){
+
+			writeFlash(imgBuff, flashAddr, 1);
+			imgNum ++;
+			flashAddr = imgNum * ceil((1200*1600*2)/2048);
+			state = 0;
+			imgBuffIdx = 0;
+		}
+	}
+
 
 }

@@ -9,6 +9,7 @@
 #define INC_TELEMETRY_H_
 
 #include <stdint.h>
+#include <csp/csp.h>
 
 //Define the csp address of all devices in the network.
 #define POWER_CSP_ADDRESS	2
@@ -37,6 +38,8 @@ PAYLOAD_B_REFLECTANCE_ID,
 PAYLOAD_SAMPLE_LOC_ID,
 PAYLOAD_CAMERA_TIME_ID,
 PAYLOAD_ERROR_ID,
+PAYLOAD_FULL_IMAGE_RX, //Only for debugging remove later
+PAYLOAD_ACK,
 NUM_PAYLOAD_TELEMETRY
 } payloadTelemetry_t;
 
@@ -70,6 +73,7 @@ typedef struct{
 /**********************************************************/
 void unpackTelemetry(uint8_t * data, telemetryPacket_t* output);//Unpacks the telemetry into the telemetry packet struct.
 void sendTelemetry(telemetryPacket_t * packet);//Sends telemetry to CDH.
+void sendTelemetry_direct(telemetryPacket_t * packet,csp_conn_t * conn); //For directly responding to a message.
 
 /**********************************************************/
 
