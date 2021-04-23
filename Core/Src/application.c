@@ -13,11 +13,27 @@
 #include "csp/interfaces/csp_if_can.h"
 #include "flash.h"
 #include <math.h>
+#include "yaffsfs.h"
 
 void handleCommand(telemetryPacket_t* command,csp_conn_t * connection);
 void rx_image(uint8_t * chunk,uint16_t size,uint16_t num);
 
 void commandHandler(void * pvparams){
+
+//		uint8_t check[64]={0};
+//		readSpare(check,0);
+		int result = yaffs_mount("flash");
+//		readSpare(check,0);
+
+		int fd = yaffs_open("flash/testFile.txt",O_CREAT|O_RDWR,0666);
+
+		char *hello = "Hello World";
+		yaffs_write(fd, hello,strlen(hello));
+		yaffs_lseek(fd, 0, SEEK_SET);
+		char helloRead[11];
+		result = yaffs_read(fd,helloRead,11);
+		yaffs_close(fd);
+
 
 		struct csp_can_config can_conf;
 		can_conf.bitrate=250000;

@@ -37,6 +37,10 @@
 
 #include "flash.h"
 
+#include "filesystemDriver.h"
+#include "yaffs_yaffs2.h"
+#include "yaffsfs.h"
+
 
 /* USER CODE END Includes */
 
@@ -155,7 +159,33 @@ int main(void)
 
 //    BaseType_t state = xTaskCreate(vTestMemory,"test mem", 10000,NULL,1,NULL);
 
-  /* USER CODE END 2 */
+
+    yaffsfs_OSInitialisation();
+    struct yaffs_dev* fileSystemDevice;
+    fs_nand_install_drv(fileSystemDevice);
+//    uint8_t check[64] = {0};
+//    uint8_t pages[2048] = {0};
+//    uint8_t pages2[2048];
+//    for(int i=0;i<2048;i++){
+//    	pages2[i] = i%255;
+//    }
+//    writeFlash(pages2, 0, 1);
+//    readFlash(pages,0,1);
+//    readSpare(check, 0);
+//////
+////    eraseFlashPages(0, 1);
+////    memset(pages,0,2048);
+//    memset(check,0,64);
+////    HAL_Delay(20);
+////    readSpare(check, 0);
+//    readFlash(pages, 0, 1);
+//    eraseFlashDevice();
+////    memset(check,0,64);
+//    readSpare(check,0);
+    size_t freeSpace= xPortGetFreeHeapSize();
+//    while(1){};
+
+    /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
