@@ -53,6 +53,7 @@ void yaffsfs_get_malloc_values(unsigned *current, unsigned *high_water){
 int yaffsfs_CheckMemRegion(const void *addr, size_t size, int write_request){
 
 	//Should actually do somethign here, but I dont understand exactly how this works...
+	//Maybe checkout old filesystem branch from cdh software, since I tried integrating yaffs once before...
 	return 0;
 }
 
@@ -61,4 +62,7 @@ void yaffsfs_OSInitialisation(void){
 	fs_lock = xSemaphoreCreateMutex();
 }
 
-void yaffs_bug_fn(const char *file_name, int line_no){}
+void yaffs_bug_fn(const char *file_name, int line_no){
+
+
+}

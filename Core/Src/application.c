@@ -21,18 +21,8 @@ void rx_image(uint8_t * chunk,uint16_t size,uint16_t num);
 void commandHandler(void * pvparams){
 
 //		uint8_t check[64]={0};
-//		readSpare(check,0);
-		int result = yaffs_mount("flash");
-//		readSpare(check,0);
 
-		int fd = yaffs_open("flash/testFile.txt",O_CREAT|O_RDWR,0666);
 
-		char *hello = "Hello World";
-		yaffs_write(fd, hello,strlen(hello));
-		yaffs_lseek(fd, 0, SEEK_SET);
-		char helloRead[11];
-		result = yaffs_read(fd,helloRead,11);
-		yaffs_close(fd);
 
 
 		struct csp_can_config can_conf;
@@ -61,6 +51,30 @@ void commandHandler(void * pvparams){
 	csp_socket_t * socket = csp_socket(0);
 	csp_bind(socket, CSP_ANY);
 	csp_listen(socket,4);
+
+	//		readSpare(check,0);
+			int result = yaffs_mount("flash");
+	//		readSpare(check,0);
+			result = yaffs_access("flash/testFile.txt", 0);
+			result = yaffs_access("flash/testFile.txt", R_OK);
+			result = yaffs_access("flash/testFile.txt", W_OK);
+			result = yaffs_chmod("flash/testFile.txt", S_IREAD| S_IWRITE);
+			result = yaffs_access("flash/testFile.txt", R_OK);
+			result = yaffs_access("flash/testFile.txt", W_OK);
+
+			int fd = yaffs_open("flash/testFile.txt",O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
+
+			int runCount;
+			char runCountStr[4];
+
+			result = yaffs_read(fd,runCountStr,3);
+			runCount = atoi(runCountStr);
+			snprintf(runCountStr,4,"%3d",runCount+1);
+			yaffs_lseek(fd, 0, SEEK_SET);
+			yaffs_write(fd, runCountStr,strlen(runCountStr));
+			yaffs_close(fd);
+
+
 
 	while(1){
 //		freSpace = xPortGetFreeHeapSize();
