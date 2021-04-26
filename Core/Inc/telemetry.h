@@ -74,7 +74,8 @@ typedef struct{
 void unpackTelemetry(uint8_t * data, telemetryPacket_t* output);//Unpacks the telemetry into the telemetry packet struct.
 void sendTelemetry(telemetryPacket_t * packet);//Sends telemetry to CDH.
 void sendTelemetry_direct(telemetryPacket_t * packet,csp_conn_t * conn); //For directly responding to a message.
-
+void sendCommand(telemetryPacket_t * packet,uint8_t addr);//Sends a cmd packet to the cmd port of the subsytem at address addr.
+void sendTelemetryAddr(telemetryPacket_t * packet,uint8_t addr); //Sends telemetry directly to a subsystem.
 /**********************************************************/
 
 #endif /* INC_TELEMETRY_H_ */

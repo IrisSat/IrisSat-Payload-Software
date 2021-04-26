@@ -9,21 +9,23 @@
 #include "telemetry.h"
 #include "adc.h"
 #include "cmsis_os.h"
+#include "queue.h"
 #include <csp/csp.h>
 #include "csp/interfaces/csp_if_can.h"
 #include "flash.h"
 #include <math.h>
 #include "yaffsfs.h"
 
+
+void imageTransfer(void * pvParams);
 void handleCommand(telemetryPacket_t* command,csp_conn_t * connection);
 void rx_image(uint8_t * chunk,uint16_t size,uint16_t num);
+
+QueueHandle_t imageSendQueue;
 
 void commandHandler(void * pvparams){
 
 //		uint8_t check[64]={0};
-
-
-
 
 		struct csp_can_config can_conf;
 		can_conf.bitrate=250000;
@@ -74,7 +76,19 @@ void commandHandler(void * pvparams){
 			yaffs_write(fd, runCountStr,strlen(runCountStr));
 			yaffs_close(fd);
 
+			if(yaffs_access("flash/1.jpg",0) <0){
 
+				int fd = yaffs_open("flash/1.jpg",O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
+				char * dummyFile = "The theme of Iris is astronomy and geology. We are collaborating with University of Winnipeg, York University and Interlake School Division as well as Magellan Aerospace to study how space conditions affect the composition of asteroids and the Moon. This will enable researchers on Earth to better understand those effects when studying their cousins, meteorites. This mission will also help better understand the origins of asteroids when we combine this data with the data from asteroid sample-return missions such as the OSIRIS-REX mission.";
+				yaffs_write(fd,dummyFile,strlen(dummyFile));
+				yaffs_close(fd);
+			}
+
+			imageSendQueue = xQueueCreate(2,sizeof(uint8_t));
+			//Create the task for sending images.
+			//This is a task since sending images can take long, and we don't want payload unresponsive while sending image.
+			//Transfer is started by passing the desired image through the imageSendQueue.
+			xTaskCreate(imageTransfer, "Img Xfer", 256, (void *)imageSendQueue, 2, NULL);
 
 	while(1){
 //		freSpace = xPortGetFreeHeapSize();
@@ -142,7 +156,7 @@ void handleCommand(telemetryPacket_t* command,csp_conn_t * connection){
 				telemetryPacket_t telemetry;
 				telemetry.telem_id= PAYLOAD_ERROR_ID;
 				telemetry.timestamp = command->timestamp;//Is this correct? Are we keeping time on payload? Or should we ping CDH to get the time?
-				telemetry.length =  0; //no data. Culd add error code later.
+				telemetry.length =  0; //no data. Could add error code later.
 
 				sendTelemetry(&telemetry);
 
@@ -157,6 +171,9 @@ void handleCommand(telemetryPacket_t* command,csp_conn_t * connection){
 		}
 
 		case PAYLOAD_FULL_IMAGE_ID:{
+
+			uint8_t fileNum = *command->data;
+			xQueueSend(imageSendQueue,&fileNum,100);
 
 			break;
 		}
@@ -210,6 +227,80 @@ void handleCommand(telemetryPacket_t* command,csp_conn_t * connection){
 
 	}
 
+}
+
+
+void imageTransfer(void * pvParams){
+	//make this a task.
+
+	int file;
+	uint32_t size = 0;
+	uint32_t numChunks =0;
+	uint8_t chunk[CHUNKSIZE+sizeof(uint32_t)];
+	char name[10];
+	uint8_t fileNum;
+
+	QueueHandle_t requestQ = (QueueHandle_t) pvParams;
+	Calendar_t time = {0};
+
+	while(1){
+
+		//Wait until we get a request to transfer image.
+		xQueueReceive(requestQ, &fileNum, portMAX_DELAY);
+
+		//Convert the image num to a file name.Limit is 2 digit filenum!
+		snprintf(name,10,"%2d.jpg",fileNum);
+
+		file = yaffs_open(name,O_RDONLY,0);
+
+		size = 0;
+		numChunks =0;
+
+
+		if(file<0){
+			//send negative response.
+
+			uint8_t error = 1; //File not found or can't be accessed. Add more detailed error handling later...
+			telemetryPacket_t telemetry;
+			telemetry.telem_id= PAYLOAD_ERROR_ID;
+			telemetry.timestamp = time;
+			telemetry.length =  sizeof(uint8_t);
+			telemetry.data = &error;
+
+			sendTelemetryAddr(&telemetry,GROUND_CSP_ADDRESS);
+			continue; //Skip the file send since we've got invalid file.
+		}
+		else{
+
+			size = yaffs_lseek(file,0,SEEK_END);
+			yaffs_lseek(file,0,SEEK_SET);
+			numChunks = (size%CHUNKSIZE==0) ? size/CHUNKSIZE: size/CHUNKSIZE+1;
+			//Send info packet.
+			uint32_t info[2] = {size,numChunks};
+			telemetryPacket_t telemetry;
+			telemetry.telem_id= PAYLOAD_ACK;
+			telemetry.timestamp = time;
+			telemetry.length =  sizeof(uint32_t)*2;
+			telemetry.data = (uint8_t*)info;
+
+			sendTelemetryAddr(&telemetry,GROUND_CSP_ADDRESS);
+		}
+
+		for(int i=0; i< numChunks;i++){
+			int readSize = yaffs_read(file,&chunk[sizeof(uint32_t)],CHUNKSIZE);
+			*((uint32_t*)&chunk[0]) = i*CHUNKSIZE; //Send the position (in bytes) where this packet belongs.
+			telemetryPacket_t telemetry;
+			telemetry.telem_id= PAYLOAD_FULL_IMAGE_ID;
+			telemetry.timestamp = time;
+			telemetry.length =  sizeof(uint32_t)+readSize;
+			telemetry.data = chunk;
+
+			sendTelemetryAddr(&telemetry,GROUND_CSP_ADDRESS);
+		}
+
+		yaffs_close(file);
+
+	}
 }
 
 uint8_t imgBuff[2048];

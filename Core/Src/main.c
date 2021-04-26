@@ -154,7 +154,7 @@ int main(void)
                              "cmdHandler",
                              1000,
                              NULL,
-                             1,
+                             3,
                              NULL);
 
 //    BaseType_t state = xTaskCreate(vTestMemory,"test mem", 10000,NULL,1,NULL);

@@ -8,6 +8,7 @@
 #ifndef INC_APPLICATION_H_
 #define INC_APPLICATION_H_
 
+#define CHUNKSIZE	100
 
 void commandHandler(void * pvparams);
 
