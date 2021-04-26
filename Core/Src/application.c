@@ -76,19 +76,24 @@ void commandHandler(void * pvparams){
 			yaffs_write(fd, runCountStr,strlen(runCountStr));
 			yaffs_close(fd);
 
-			if(yaffs_access("flash/1.jpg",0) <0){
+			if(yaffs_access("flash/01.jpg",0) <0){
 
-				int fd = yaffs_open("flash/1.jpg",O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
+				int fd = yaffs_open("flash/01.jpg",O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
 				char * dummyFile = "The theme of Iris is astronomy and geology. We are collaborating with University of Winnipeg, York University and Interlake School Division as well as Magellan Aerospace to study how space conditions affect the composition of asteroids and the Moon. This will enable researchers on Earth to better understand those effects when studying their cousins, meteorites. This mission will also help better understand the origins of asteroids when we combine this data with the data from asteroid sample-return missions such as the OSIRIS-REX mission.";
 				yaffs_write(fd,dummyFile,strlen(dummyFile));
 				yaffs_close(fd);
 			}
 
-			imageSendQueue = xQueueCreate(2,sizeof(uint8_t));
+			freSpace = xPortGetFreeHeapSize();
+
+			imageSendQueue = xQueueCreate(4,sizeof(uint8_t));
+
+			freSpace = xPortGetFreeHeapSize();
 			//Create the task for sending images.
 			//This is a task since sending images can take long, and we don't want payload unresponsive while sending image.
 			//Transfer is started by passing the desired image through the imageSendQueue.
-			xTaskCreate(imageTransfer, "Img Xfer", 256, (void *)imageSendQueue, 2, NULL);
+			xTaskCreate(imageTransfer, "Img Xfer", 512, (void *)imageSendQueue, 2, NULL);
+			freSpace = xPortGetFreeHeapSize();
 
 	while(1){
 //		freSpace = xPortGetFreeHeapSize();
@@ -173,8 +178,11 @@ void handleCommand(telemetryPacket_t* command,csp_conn_t * connection){
 		case PAYLOAD_FULL_IMAGE_ID:{
 
 			uint8_t fileNum = *command->data;
-			xQueueSend(imageSendQueue,&fileNum,100);
-
+			size_t freSpace = xPortGetFreeHeapSize();
+			UBaseType_t full =  uxQueueMessagesWaiting(imageSendQueue);
+			BaseType_t res = xQueueSend(imageSendQueue,&fileNum,100);
+			full =  uxQueueMessagesWaiting( imageSendQueue);
+			freSpace = xPortGetFreeHeapSize();
 			break;
 		}
 
@@ -237,7 +245,7 @@ void imageTransfer(void * pvParams){
 	uint32_t size = 0;
 	uint32_t numChunks =0;
 	uint8_t chunk[CHUNKSIZE+sizeof(uint32_t)];
-	char name[10];
+	char name[15];
 	uint8_t fileNum;
 
 	QueueHandle_t requestQ = (QueueHandle_t) pvParams;
@@ -247,9 +255,9 @@ void imageTransfer(void * pvParams){
 
 		//Wait until we get a request to transfer image.
 		xQueueReceive(requestQ, &fileNum, portMAX_DELAY);
-
+		UBaseType_t full =  uxQueueMessagesWaiting( imageSendQueue);
 		//Convert the image num to a file name.Limit is 2 digit filenum!
-		snprintf(name,10,"%2d.jpg",fileNum);
+		snprintf(name,15,"flash/%02d.jpg",fileNum);
 
 		file = yaffs_open(name,O_RDONLY,0);
 
