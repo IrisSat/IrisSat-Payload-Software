@@ -6,13 +6,15 @@
 
 #include "yaffsfs.h"
 
+uint8_t fs_readBuffer[2048];
+uint8_t fs_writeBuffer[2048];
 
 int fs_writeChunk(struct yaffs_dev *dev, int nand_chunk, const u8 *data, int data_len,const u8 *oob, int oob_len){
 
-	uint8_t dataBuff[2048]={0};
-	uint8_t* dataPointer = dataBuff;
+//	uint8_t dataBuff[2048]={0};
+	uint8_t* dataPointer = fs_writeBuffer;
 	if(data_len != 2048){
-		memcpy(dataBuff,data,data_len);
+		memcpy(fs_writeBuffer,data,data_len);
 	}
 	else{
 		dataPointer = data;
@@ -64,8 +66,8 @@ int fs_writeChunk(struct yaffs_dev *dev, int nand_chunk, const u8 *data, int dat
 
 int fs_readChunk (struct yaffs_dev *dev, int nand_chunk, u8 *data, int data_len,u8 *oob, int oob_len,enum yaffs_ecc_result *ecc_result){
 
-	uint8_t dataBuff[2048]={0};
-	uint8_t* dataPointer = dataBuff;
+//	uint8_t dataBuff[2048]={0};
+	uint8_t* dataPointer = fs_readBuffer;
 	if(data_len == 2048){
 		dataPointer = data;
 	}
