@@ -293,7 +293,7 @@ void imageTransfer(void * pvParams){
 
 			sendTelemetryAddr(&telemetry,GROUND_CSP_ADDRESS);
 		}
-
+		vTaskDelay(pdMS_TO_TICKS(500));
 		for(int i=0; i< numChunks;i++){
 			int readSize = yaffs_read(file,&chunk[sizeof(uint32_t)],CHUNKSIZE);
 			*((uint32_t*)&chunk[0]) = i*CHUNKSIZE; //Send the position (in bytes) where this packet belongs.
@@ -304,6 +304,7 @@ void imageTransfer(void * pvParams){
 			telemetry.data = chunk;
 
 			sendTelemetryAddr(&telemetry,GROUND_CSP_ADDRESS);
+			vTaskDelay(10);
 		}
 
 		yaffs_close(file);
