@@ -29,6 +29,10 @@ int initFlash();
  */
 int8_t writeFlash(uint8_t * data, uint32_t pageAddr, uint32_t len_pages);
 
+int8_t writeSpare(uint8_t * data,uint32_t pageAddr);
+
+int8_t readSpare(uint8_t * data,uint32_t pageAddr);
+
 /* readFlash: This reads pages of data from the flash memory.
  *
  * 	data should be a pointer to where the data will be read to. The data buffer must be a multiple of 2048!

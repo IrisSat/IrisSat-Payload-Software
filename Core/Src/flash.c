@@ -8,6 +8,9 @@
 #include "flash.h"
 #include "gpio.h"
 #include "fmc.h"
+#include <string.h>
+
+
 
 //Returns 1 if pageAddr is valid and there is len pages before the end of memory.
 //Returns -1 if pageAddr is invalid. Returns -2 if pageAddr +len is invalid (not enough space).
@@ -53,6 +56,7 @@ int initFlash(){
 //Write len_pages pages of data from the data pointer to flash, starting at page pageAddr.
 int8_t writeFlash(uint8_t * data, uint32_t pageAddr, uint32_t len_pages){
 
+
 	//Validate write request
 	int8_t result = validateAddress(&hnand1, pageAddr, len_pages);
 	if(result != 1){
@@ -64,18 +68,50 @@ int8_t writeFlash(uint8_t * data, uint32_t pageAddr, uint32_t len_pages){
 	addr.Page = pageAddr % hnand1.Config.BlockSize;
 	addr.Block = pageAddr/hnand1.Config.BlockSize;
 	addr.Plane = 0;
-
+	uint32_t eccVal=0;
 	for(int i=0; i<len_pages; i++){
 		//Write one page at a time? This might minimize effects of disabling interrupts.
 		__disable_irq();
+		HAL_NAND_ECC_Enable(&hnand1);
 		HAL_NAND_Write_Page_8b(&hnand1, &addr,&(data[i*2048]), 1);
+		HAL_NAND_GetECC(&hnand1, &eccVal, 50);
+		HAL_NAND_ECC_Disable(&hnand1);
 		__enable_irq();
+
+
 		HAL_NAND_Address_Inc(&hnand1, &addr);
 
 	}
 
 	return 1;
 }
+
+int8_t writeSpare(uint8_t * data,uint32_t pageAddr){
+
+	NAND_AddressTypeDef addr;
+	addr.Page = pageAddr % hnand1.Config.BlockSize;
+	addr.Block = pageAddr/hnand1.Config.BlockSize;
+	addr.Plane = 0;
+	__disable_irq();
+	HAL_NAND_Write_SpareArea_8b(&hnand1, &addr, data, 1);
+	__enable_irq();
+	return 1;
+}
+
+int8_t readSpare(uint8_t * data,uint32_t pageAddr){
+//	uint8_t spareAreaBuf[64]={0};
+	NAND_AddressTypeDef addr;
+	addr.Page = pageAddr % hnand1.Config.BlockSize;
+	addr.Block = pageAddr/hnand1.Config.BlockSize;
+	addr.Plane = 0;
+	__disable_irq();
+	HAL_NAND_Read_SpareArea_8b(&hnand1, &addr, data, 1);
+	__enable_irq();
+//	memcpy(data,spareAreaBuf,64);
+//	memset(spareAreaBuf,0,64);
+	return 1;
+}
+
 int8_t readFlash(uint8_t* data, uint32_t pageAddr, uint32_t len_pages){
 
 	//Validate read request
@@ -104,13 +140,15 @@ int8_t readFlash(uint8_t* data, uint32_t pageAddr, uint32_t len_pages){
 void eraseFlashDevice(){
 
 	NAND_AddressTypeDef addr;
+	addr.Page=0;
+	addr.Plane=0;
 	addr.Block = 0;
 	for(int i=0; i< hnand1.Config.BlockNbr;i++){
 		__disable_irq();
 		HAL_NAND_Erase_Block(&hnand1, &addr);
 		__enable_irq();
 		addr.Block = addr.Block+1;
-
+		HAL_Delay(20);
 	}
 
 }

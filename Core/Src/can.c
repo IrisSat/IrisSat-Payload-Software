@@ -45,7 +45,7 @@ void MX_CAN2_Init(void)
   hcan2.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan2) != HAL_OK)
   {
-//    Error_Handler();
+    Error_Handler();
   }
 
 }
@@ -69,7 +69,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     PB13     ------> CAN2_TX
     PB5     ------> CAN2_RX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_5;
+    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_12;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -124,6 +124,8 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 /* USER CODE BEGIN 1 */
 void startCAN(){
 
+		csp_rx_queue = get_csp_can_queue();
+
 			hcan2.Instance = CAN1;
 		  CAN_FilterTypeDef filterConfig;
 		  filterConfig.FilterMode = CAN_FILTERMODE_IDMASK;//Choose mask mode.Accept when RxID & mask == ID.
@@ -140,6 +142,7 @@ void startCAN(){
 		if (HAL_CAN_RegisterCallback(&hcan2, HAL_CAN_RX_FIFO0_MSG_PENDING_CB_ID, can_irq)) {
 					Error_Handler();
 				  }
+
 //	    hcan2.Instance->BTR |= CAN_BTR_LBKM|CAN_BTR_SILM; // set loopback mode.
 		hcan2.Instance->MCR &= ~(1<<16);
 	    if (HAL_CAN_Start(&hcan2) != HAL_OK) {

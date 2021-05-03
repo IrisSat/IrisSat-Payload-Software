@@ -9,6 +9,7 @@
 #define INC_TELEMETRY_H_
 
 #include <stdint.h>
+#include <csp/csp.h>
 
 //Define the csp address of all devices in the network.
 #define POWER_CSP_ADDRESS	2
@@ -27,18 +28,56 @@
 
 //Payload telemetry.
 typedef enum {
-PAYLOAD_POWER_GOOD_ID,
+PAYLOAD_POWER_GOOD_ID = 0,
 PAYLOAD_BOARD_TEMP_ID,
 PAYLOAD_SAMPLE_TEMP_ID,
 PAYLOAD_FULL_IMAGE_ID,
-PAYLOAD_R_REFLECTANCE_ID,
-PAYLOAD_G_REFLECTANCE_ID,
-PAYLOAD_B_REFLECTANCE_ID,
 PAYLOAD_SAMPLE_LOC_ID,
 PAYLOAD_CAMERA_TIME_ID,
 PAYLOAD_ERROR_ID,
+PAYLOAD_FULL_IMAGE_RX, //Only for debugging remove later
+PAYLOAD_FILE_LIST_ID,
+PAYLOAD_META_ID,
+PAYLOAD_IMAGE_INFO,
+PAYLOAD_ACK,
 NUM_PAYLOAD_TELEMETRY
 } payloadTelemetry_t;
+
+typedef enum {
+PAYLOAD_POWER_GOOD_CMD = 0,
+PAYLOAD_BOARD_TEMP_CMD,
+PAYLOAD_SAMPLE_TEMP_CMD,
+PAYLOAD_FULL_IMAGE_CMD,
+PAYLOAD_TAKE_IMAGE_CAM1_CMD,
+PAYLOAD_TAKE_IMAGE_CAM2_CMD,
+PAYLOAD_SAMPLE_LOC_CMD,
+PAYLOAD_CAMERA_TIME_CMD,
+PAYLOAD_ERROR_CMD,
+PAYLOAD_FILE_LIST_CMD,
+PAYLOAD_SHUTDOWN_CMD,
+NUM_PAYLOAD_COMMANDS
+} payloadCommands_t;
+
+
+typedef enum {
+CDH_TIME_ID =0,
+CDH_BOARD_TEMP_ID,
+CDH_TTT_LIST_ID,
+NUM_CDH_TELEMETRY
+} cdhTelemetry_t;
+
+typedef enum {
+CDH_SCHEDULE_TTT_CMD =0,
+CDH_SET_TIME_CMD,
+CDH_GET_TIME_CMD,
+CDH_DOWNLOAD_IMAGE_CMD,
+NUM_CDH_COMMANDS
+} cdhCommands_t;
+
+typedef enum {
+TASK_TAKE_IMAGE =0,
+NUM_CDH_TASK
+} cdhTask_t;
 
 
 
@@ -70,7 +109,9 @@ typedef struct{
 /**********************************************************/
 void unpackTelemetry(uint8_t * data, telemetryPacket_t* output);//Unpacks the telemetry into the telemetry packet struct.
 void sendTelemetry(telemetryPacket_t * packet);//Sends telemetry to CDH.
-
+void sendTelemetry_direct(telemetryPacket_t * packet,csp_conn_t * conn); //For directly responding to a message.
+void sendCommand(telemetryPacket_t * packet,uint8_t addr);//Sends a cmd packet to the cmd port of the subsytem at address addr.
+void sendTelemetryAddr(telemetryPacket_t * packet,uint8_t addr); //Sends telemetry directly to a subsystem.
 /**********************************************************/
 
 #endif /* INC_TELEMETRY_H_ */
