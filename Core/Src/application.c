@@ -22,7 +22,8 @@ void imageTransfer(void * pvParams);
 void handleCommand(telemetryPacket_t* command,csp_conn_t * connection);
 void rx_image(uint8_t * chunk,uint16_t size,uint16_t num);
 void takeImage(uint8_t camNum,Calendar_t * time);
-
+void powerCamera(uint8_t camNum, uint8_t onOrOff);
+void resetCamera(uint8_t camNum);
 
 QueueHandle_t imageSendQueue;
 
@@ -266,12 +267,39 @@ void handleCommand(telemetryPacket_t* command,csp_conn_t * connection){
 			break;
 		}
 
-		case PAYLOAD_SAMPLE_LOC_CMD:{
+		case PAYLOAD_CAM1_OFF_CMD:{
+
+			powerCamera(1, 0);
 
 			break;
 		}
+		case PAYLOAD_CAM2_OFF_CMD:{
 
-		case PAYLOAD_CAMERA_TIME_CMD:{
+			powerCamera(2, 0);
+
+			break;
+		}
+		case PAYLOAD_CAM1_ON_CMD:{
+
+			powerCamera(1, 1);
+
+			break;
+		}
+		case PAYLOAD_CAM2_ON_CMD:{
+
+			powerCamera(2, 1);
+
+			break;
+		}
+		case PAYLOAD_CAM1_RESET_CMD:{
+
+			resetCamera(1);
+
+			break;
+		}
+		case PAYLOAD_CAM2_RESET_CMD:{
+
+			resetCamera(2);
 
 			break;
 		}
@@ -498,3 +526,6 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 
 
 }
+
+void powerCamera(uint8_t camNum, uint8_t onOrOff){}
+void resetCamera(uint8_t camNum){}
