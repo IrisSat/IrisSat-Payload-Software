@@ -15,6 +15,7 @@ SemaphoreHandle_t fs_lock;
 
 unsigned yaffs_trace_mask = YAFFS_TRACE_SCAN | YAFFS_TRACE_GC |YAFFS_TRACE_ERASE |YAFFS_TRACE_ERROR |YAFFS_TRACE_TRACING |YAFFS_TRACE_ALLOCATE |YAFFS_TRACE_BAD_BLOCKS |YAFFS_TRACE_VERIFY |0;
 
+int yaffsErrorCode;
 
 void yaffsfs_Lock(void){
 
@@ -30,9 +31,10 @@ u32 yaffsfs_CurrentTime(void){
 	return xTaskGetTickCount();
 }
 
+
 void yaffsfs_SetError(int err){
 
-	int a = err;
+	yaffsErrorCode = err;
 }
 
 void *yaffsfs_malloc(size_t size){

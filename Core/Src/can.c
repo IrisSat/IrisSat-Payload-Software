@@ -142,6 +142,7 @@ void startCAN(){
 		if (HAL_CAN_RegisterCallback(&hcan2, HAL_CAN_RX_FIFO0_MSG_PENDING_CB_ID, can_irq)) {
 					Error_Handler();
 				  }
+
 //	    hcan2.Instance->BTR |= CAN_BTR_LBKM|CAN_BTR_SILM; // set loopback mode.
 		hcan2.Instance->MCR &= ~(1<<16);
 	    if (HAL_CAN_Start(&hcan2) != HAL_OK) {
