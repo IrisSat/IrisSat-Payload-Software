@@ -56,7 +56,8 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern CAN_HandleTypeDef hcan2;
+extern DMA_HandleTypeDef hdma_dcmi;
+extern DCMI_HandleTypeDef hdcmi;
 extern TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN EV */
@@ -176,59 +177,31 @@ void TIM1_UP_TIM10_IRQHandler(void)
 }
 
 /**
-  * @brief This function handles CAN2 TX interrupts.
+  * @brief This function handles DMA2 stream7 global interrupt.
   */
-void CAN2_TX_IRQHandler(void)
+void DMA2_Stream7_IRQHandler(void)
 {
-  /* USER CODE BEGIN CAN2_TX_IRQn 0 */
+  /* USER CODE BEGIN DMA2_Stream7_IRQn 0 */
 
-  /* USER CODE END CAN2_TX_IRQn 0 */
-  HAL_CAN_IRQHandler(&hcan2);
-  /* USER CODE BEGIN CAN2_TX_IRQn 1 */
+  /* USER CODE END DMA2_Stream7_IRQn 0 */
+  HAL_DMA_IRQHandler(&hdma_dcmi);
+  /* USER CODE BEGIN DMA2_Stream7_IRQn 1 */
 
-  /* USER CODE END CAN2_TX_IRQn 1 */
+  /* USER CODE END DMA2_Stream7_IRQn 1 */
 }
 
 /**
-  * @brief This function handles CAN2 RX0 interrupts.
+  * @brief This function handles DCMI global interrupt.
   */
-void CAN2_RX0_IRQHandler(void)
+void DCMI_IRQHandler(void)
 {
-  /* USER CODE BEGIN CAN2_RX0_IRQn 0 */
+  /* USER CODE BEGIN DCMI_IRQn 0 */
 
-  /* USER CODE END CAN2_RX0_IRQn 0 */
-  HAL_CAN_IRQHandler(&hcan2);
-  /* USER CODE BEGIN CAN2_RX0_IRQn 1 */
+  /* USER CODE END DCMI_IRQn 0 */
+  HAL_DCMI_IRQHandler(&hdcmi);
+  /* USER CODE BEGIN DCMI_IRQn 1 */
 
-  /* USER CODE END CAN2_RX0_IRQn 1 */
-}
-
-/**
-  * @brief This function handles CAN2 RX1 interrupt.
-  */
-void CAN2_RX1_IRQHandler(void)
-{
-  /* USER CODE BEGIN CAN2_RX1_IRQn 0 */
-
-  /* USER CODE END CAN2_RX1_IRQn 0 */
-  HAL_CAN_IRQHandler(&hcan2);
-  /* USER CODE BEGIN CAN2_RX1_IRQn 1 */
-
-  /* USER CODE END CAN2_RX1_IRQn 1 */
-}
-
-/**
-  * @brief This function handles CAN2 SCE interrupt.
-  */
-void CAN2_SCE_IRQHandler(void)
-{
-  /* USER CODE BEGIN CAN2_SCE_IRQn 0 */
-
-  /* USER CODE END CAN2_SCE_IRQn 0 */
-  HAL_CAN_IRQHandler(&hcan2);
-  /* USER CODE BEGIN CAN2_SCE_IRQn 1 */
-
-  /* USER CODE END CAN2_SCE_IRQn 1 */
+  /* USER CODE END DCMI_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

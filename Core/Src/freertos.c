@@ -26,9 +26,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "queue.h"
-#include "can.h"
-#include <string.h>
+#include "dcmi.h"
+#include "dma.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,6 +38,13 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+volatile int a = 0;
+int count = 0;
+static uint32_t img_size = 50000;
+uint32_t jpeg_buffer[50000] = {0};
+//static uint8_t *memory_location = jpeg_buffer;
+HAL_DCMI_StateTypeDef retval;
+uint32_t errval;
 
 /* USER CODE END PD */
 
@@ -48,7 +55,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-
 
 /* USER CODE END Variables */
 /* Definitions for defaultTask */
@@ -61,10 +67,6 @@ const osThreadAttr_t defaultTask_attributes = {
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-
-void canRxTask(void* pvParams);
-void canTxTestTask(void* pvParams);
-
 
 /* USER CODE END FunctionPrototypes */
 
@@ -104,8 +106,6 @@ void MX_FREERTOS_Init(void) {
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-
-
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -127,15 +127,77 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    osDelay(1000);
+    if (count == 0){
+    	osDelay(50);
+    	CameraSoftReset();
+    	osDelay(50);
+    	CameraSensorInit();
+        count = 1;
+        osDelay(50);
+        StartSensorInJpegMode(600,480);
+        osDelay(50);
+        jpeg_buffer[1] = 1;
+        jpeg_buffer[2] = 1;
+        jpeg_buffer[3] = 1;
+        jpeg_buffer[4] = 1;
+        jpeg_buffer[5] = 1;
+        jpeg_buffer[6] = 1;
+        jpeg_buffer[7] = 1;
+        jpeg_buffer[8] = 1;
+        jpeg_buffer[9] = 1;
+        jpeg_buffer[10] = 1;
+
+    	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
+    	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_VSYNC);
+    	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_ERR);
+    	retval = HAL_DCMI_GetState(&hdcmi);
+    	HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t) jpeg_buffer, img_size);
+    	DoCapture();
+    	retval = HAL_DCMI_GetState(&hdcmi);
+
+    	osDelay(50);
+    	errval = HAL_DCMI_GetError(&hdcmi);
+    	osDelay(50);
+    	while(1){
+    		if (a == 1){
+    			break;
+    		}
+    		osDelay(50);
+    	}
+    	int ff_count =0;
+    	int counter = 0;
+    	retval = HAL_DCMI_GetState(&hdcmi);
+    	//for(int i=0; i<img_size; i++){
+
+    		//if( (((jpeg_buffer[i]>>24)&0x000000FF) == 0xFF) || (jpeg_buffer[i]>>16)&0x000000FF == 0xFF|| (jpeg_buffer[i]>>8)&0x000000FF == 0xFF||(jpeg_buffer[i]>>0)&0x000000FF == 0xFF ){
+//
+  //  			ff_count++;
+    //		}
+    	//	counter++;
+    	//}
+
+    }
+
+
   }
   /* USER CODE END StartDefaultTask */
 }
 
 /* Private application code --------------------------------------------------*/
 /* USER CODE BEGIN Application */
+void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+	//HAL_DCMI_Stop(hdcmi);
+	a = 1;
 
+}
+void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+	//HAL_DCMI_Stop(hdcmi);
+	a = 1;
 
+}
 /* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

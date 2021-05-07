@@ -21,26 +21,16 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "adc.h"
-#include "can.h"
+#include "dcmi.h"
+#include "dma.h"
+#include "i2c.h"
 #include "gpio.h"
-#include "fmc.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <string.h>
-#include <stdio.h>
 
-#include <csp/csp.h>
-#include "csp/interfaces/csp_if_can.h"
-
-#include "application.h"
-
-#include "flash.h"
-
-#include "filesystemDriver.h"
-#include "yaffs_yaffs2.h"
-#include "yaffsfs.h"
-
+#include <string.h> //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+#include <stdio.h> //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 /* USER CODE END Includes */
 
@@ -69,17 +59,11 @@ void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
 /* USER CODE BEGIN PFP */
 int test(int a, int b);
-static void vTestCspServer(void * pvParameters);
-static void vTestCspClient(void * pvParameters);
-void vTestMemory(void * pvParams);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-//Un-comment one, to run the CSP client or server task.
-//#define CLIENT
-//#define SERVER
 /* USER CODE END 0 */
 
 /**
@@ -89,7 +73,6 @@ void vTestMemory(void * pvParams);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
 
   /* USER CODE END 1 */
 
@@ -111,81 +94,20 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
-//  MX_CAN2_Init();
-  MX_FMC_Init();
+  MX_DCMI_Init();
+  MX_I2C2_Init();
+  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
-  HAL_CAN_MspInit(&hcan2);
-  MX_CAN2_Init();
-//  startCAN();
+  /*double temp;
+  double resistance;*/
+  /* set PA0 */
+  //HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3);
 
-  BaseType_t status;
-#ifdef SERVER
-    status = xTaskCreate(vTestCspServer,
-                         "Test CSP Server",
-                         160,
-                         NULL,
-                         1,
-                         NULL);
-
-#endif
-
-#ifdef CLIENT
-    status = xTaskCreate(vTestCspClient,
-                         "Test CSP Client",
-                         160,
-                         NULL,
-                         1,
-                         NULL);
-
-
-#endif
-
-
-
-    //Test the external Flash memory:
-
-//    uint32_t* a_ptr = 0x80000000;
-//    *a_ptr = 10;
-//    uint32_t b = *a_ptr;
-
-
-    xTaskCreate(commandHandler,
-                             "cmdHandler",
-                             1000,
-                             NULL,
-                             3,
-                             NULL);
-
-//    BaseType_t state = xTaskCreate(vTestMemory,"test mem", 10000,NULL,1,NULL);
-
-
-    yaffsfs_OSInitialisation();
-    struct yaffs_dev* fileSystemDevice;
-    fs_nand_install_drv(fileSystemDevice);
-//    uint8_t check[64] = {0};
-//    uint8_t pages[2048] = {0};
-//    uint8_t pages2[2048];
-//    for(int i=0;i<2048;i++){
-//    	pages2[i] = i%255;
-//    }
-//    writeFlash(pages2, 0, 1);
-//    readFlash(pages,0,1);
-//    readSpare(check, 0);
-//////
-////    eraseFlashPages(0, 1);
-////    memset(pages,0,2048);
-//    memset(check,0,64);
-////    HAL_Delay(20);
-////    readSpare(check, 0);
-//    readFlash(pages, 0, 1);
-//    eraseFlashDevice();
-////    memset(check,0,64);
-//    readSpare(check,0);
-    size_t freeSpace= xPortGetFreeHeapSize();
-//    while(1){};
-
-    /* USER CODE END 2 */
+  /* reset PA0 */
+  //HAL_GPIO_TogglePin(GPIOE, GPIO_PIN_3 );
+  /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
@@ -199,11 +121,11 @@ int main(void)
 
   while (1)
   {
+  }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
-  }
   /* USER CODE END 3 */
 }
 
@@ -215,6 +137,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
   */
@@ -223,12 +146,13 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 25;
-  RCC_OscInitStruct.PLL.PLLN = 432;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 216;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
   RCC_OscInitStruct.PLL.PLLQ = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -254,184 +178,19 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2C2|RCC_PERIPHCLK_I2C3;
+  PeriphClkInitStruct.I2c2ClockSelection = RCC_I2C2CLKSOURCE_PCLK1;
+  PeriphClkInitStruct.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /* USER CODE BEGIN 4 */
 int test(int a, int b){
 
 	return a+b;
-}
-
-static void vTestCspServer(void * pvParameters){
-
-	struct csp_can_config can_conf;
-	can_conf.bitrate=250000;
-	can_conf.clock_speed=250000;
-	can_conf.ifc = "CAN";
-
-	/* Init buffer system with 5 packets of maximum 256 bytes each */
-	int resp = csp_buffer_init(5, 256);//The 256 number is from the MTU of the CAN interface.
-
-	/* Init CSP with address 0 */
-	resp = csp_init(0);
-
-	/* Init the CAN interface with hardware filtering */
-	resp = csp_can_init(CSP_CAN_MASKED, &can_conf);
-
-	/* Setup default route to CAN interface */
-	resp = csp_rtable_set(CSP_DEFAULT_ROUTE,0, &csp_if_can,CSP_NODE_MAC);
-
-	size_t freSpace = xPortGetFreeHeapSize();
-	/* Start router task with 100 word stack, OS task priority 1 */
-	resp = csp_route_start_task(100, 1);
-
-
-	csp_conn_t * conn = NULL;
-	csp_packet_t * packet= NULL;
-	csp_socket_t * socket = csp_socket(0);
-	csp_bind(socket, CSP_ANY);
-	csp_listen(socket,4);
-
-	while(1) {
-
-			conn = csp_accept(socket, 1000);
-			if(conn){
-				packet = csp_read(conn,0);
-				//prvUARTSend(&g_mss_uart0, packet->data, packet->length);
-				//printf(“%S\r\n�?, packet->data);
-				csp_buffer_free(packet);
-				csp_close(conn);
-			}
-	}
-}
-/*-----------------------------------------------------------*/
-static void vTestCspClient(void * pvParameters){
-
-	struct csp_can_config can_conf;
-	can_conf.bitrate=250000;
-	can_conf.clock_speed=250000;
-	can_conf.ifc = "CAN";
-
-	/* Init buffer system with 5 packets of maximum 256 bytes each */
-	int res = csp_buffer_init(5, 256);//The 256 number is from the MTU of the CAN interface.
-
-	/* Init CSP with address 1 */
-	res = csp_init(1);
-
-	/* Init the CAN interface with hardware filtering */
-	res = csp_can_init(CSP_CAN_MASKED, &can_conf);
-
-	/* Setup address 0 to route to CAN interface */
-	res = csp_rtable_set(0,0, &csp_if_can,0);
-
-	size_t freSpace = xPortGetFreeHeapSize();
-	/* Start router task with 100 word stack, OS task priority 1 */
-	res = csp_route_start_task(100, 1);
-
-
-	while(1){
-		csp_conn_t * conn;
-		csp_packet_t * packet;
-		conn = csp_connect(2,0,4,1000,0);	//Create a connection. This tells CSP where to send the data (address and destination port).
-		packet = csp_buffer_get(sizeof("TEST0 World")); // Get a buffer large enough to fit our data. Max size is 256.
-		sprintf(packet->data,"TEST0 World");
-		packet->length=strlen("TEST0 World");
-		csp_send(conn,packet,0);
-		csp_close(conn);
-		vTaskDelay(10000);
-	}
-}
-
-
-
-void vTestMemory(void * pvParams){
-
-//	//Write Protect Pin should be high.
-//	HAL_GPIO_WritePin(FLASH_WP_GPIO_Port, FLASH_WP_Pin, 1);
-//	HAL_NAND_Reset(&hnand1);
-//
-//	NAND_IDTypeDef nandInfo;
-//
-//	//For reference, the W29N02GV id:
-////	nandInfo.Device_Id = 0xDA;
-////	nandInfo.Maker_Id = 0xEF;
-////	nandInfo.Third_Id=90;
-////	nandInfo.Fourth_Id =95;
-//
-//    NAND_AddressTypeDef addr;
-//    addr.Block = 2047;
-//    addr.Page = 0;
-//    addr.Plane = 0;
-//
-//	HAL_NAND_Erase_Block(&hnand1, &addr);
-//	HAL_StatusTypeDef res =  HAL_NAND_Read_ID(&hnand1,&nandInfo);
-//
-//	uint8_t testBuff [hnand1.Config.PageSize];
-//	uint8_t testBuffRx [hnand1.Config.PageSize];
-
-
-
-int result = initFlash();
-eraseFlashDevice();
-
-	//Image is too big to fit in ram, so split into chunks of 5*2048.
-	uint8_t imageDataPart[5*2048];
-	uint16_t imageNumParts = 375; //375*5*2048  = 3.84Mb,
-
-	uint8_t imageRxPart [5*2048];
-
-	for(int j=0; j<5; j++){
-		for(int i=0; i< hnand1.Config.PageSize; i++){
-
-			imageDataPart[i+j*2048] = j;
-			imageRxPart[i+j*2048]= 0 ;
-		}
-	}
-
-	long error = 0; //Error count, this should be 0 at the end of the test.
-	uint16_t imgCount =0;
-	uint32_t currAddr=0;
-
-	while(1){
-
-		//Write an image;
-
-		for(int i=0; i< imageNumParts; i++){
-
-			int8_t res = writeFlash(imageDataPart,currAddr + i*5,5);
-			if(res != 1){
-				while(1){}
-			}
-		}
-
-		//Read the image;
-
-		for(int i=0; i< imageNumParts; i++){
-
-			int8_t res = readFlash(imageRxPart,currAddr + i*5,5);
-			if(res != 1){
-				while(1){}
-			}
-
-			for(int j=0; j<5; j++){
-				for(int i=0; i< hnand1.Config.PageSize; i++){
-
-					if(imageRxPart[i+j*2048] != j){
-						error ++;
-					}
-					}
-
-				}
-			}
-
-		//Clear Rx Buffer, just to be sure.
-		memset(imageRxPart,0,5*2048);
-		imgCount++;
-		currAddr += imageNumParts*5;
-
-
-		vTaskDelay(pdMS_TO_TICKS(5));
-	}
 }
 
 /* USER CODE END 4 */

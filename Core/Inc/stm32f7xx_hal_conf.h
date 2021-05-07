@@ -38,15 +38,15 @@
 
   #define HAL_ADC_MODULE_ENABLED
 /* #define HAL_CRYP_MODULE_ENABLED   */
-#define HAL_CAN_MODULE_ENABLED
+/* #define HAL_CAN_MODULE_ENABLED   */
 /* #define HAL_CEC_MODULE_ENABLED   */
 /* #define HAL_CRC_MODULE_ENABLED   */
 /* #define HAL_CRYP_MODULE_ENABLED   */
 /* #define HAL_DAC_MODULE_ENABLED   */
-/* #define HAL_DCMI_MODULE_ENABLED   */
+#define HAL_DCMI_MODULE_ENABLED
 /* #define HAL_DMA2D_MODULE_ENABLED   */
 /* #define HAL_ETH_MODULE_ENABLED   */
-#define HAL_NAND_MODULE_ENABLED
+/* #define HAL_NAND_MODULE_ENABLED   */
 /* #define HAL_NOR_MODULE_ENABLED   */
 /* #define HAL_SRAM_MODULE_ENABLED   */
 /* #define HAL_SDRAM_MODULE_ENABLED   */
@@ -151,11 +151,11 @@
 #define  ART_ACCLERATOR_ENABLE        0U /* To enable instruction cache and prefetch */
 
 #define  USE_HAL_ADC_REGISTER_CALLBACKS         0U /* ADC register callback disabled       */
-#define  USE_HAL_CAN_REGISTER_CALLBACKS         1U /* CAN register callback enabled       */
+#define  USE_HAL_CAN_REGISTER_CALLBACKS         0U /* CAN register callback disabled       */
 #define  USE_HAL_CEC_REGISTER_CALLBACKS         0U /* CEC register callback disabled       */
 #define  USE_HAL_CRYP_REGISTER_CALLBACKS        0U /* CRYP register callback disabled      */
 #define  USE_HAL_DAC_REGISTER_CALLBACKS         0U /* DAC register callback disabled       */
-#define  USE_HAL_DCMI_REGISTER_CALLBACKS        0U /* DCMI register callback disabled      */
+#define  USE_HAL_DCMI_REGISTER_CALLBACKS        1U /* DCMI register callback enabled      */
 #define  USE_HAL_DFSDM_REGISTER_CALLBACKS       0U /* DFSDM register callback disabled     */
 #define  USE_HAL_DMA2D_REGISTER_CALLBACKS       0U /* DMA2D register callback disabled     */
 #define  USE_HAL_DSI_REGISTER_CALLBACKS         0U /* DSI register callback disabled       */
