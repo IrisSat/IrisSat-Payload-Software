@@ -124,7 +124,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_CAN_MspInit(&hcan2);
   MX_CAN2_Init();
-//  startCAN();
+
 
   BaseType_t status;
 #ifdef SERVER
@@ -148,15 +148,7 @@ int main(void)
 
 #endif
 
-
-
-    //Test the external Flash memory:
-
-//    uint32_t* a_ptr = 0x80000000;
-//    *a_ptr = 10;
-//    uint32_t b = *a_ptr;
-
-
+    //This task does most of the stuff.
     xTaskCreate(commandHandler,
                              "cmdHandler",
                              1000,
@@ -164,33 +156,17 @@ int main(void)
                              3,
                              NULL);
 
+//	Test for the memory. Not needed for the production code...
 //    BaseType_t state = xTaskCreate(vTestMemory,"test mem", 10000,NULL,1,NULL);
 
-
+    //Initialize the filesystem to work with freertos...
     yaffsfs_OSInitialisation();
+
+    //Link the external flash with the filesystem.
     struct yaffs_dev* fileSystemDevice;
     fs_nand_install_drv(fileSystemDevice);
-//    uint8_t check[64] = {0};
-//    uint8_t pages[2048] = {0};
-//    uint8_t pages2[2048];
-//    for(int i=0;i<2048;i++){
-//    	pages2[i] = i%255;
-//    }
-//    writeFlash(pages2, 0, 1);
-//    readFlash(pages,0,1);
-//    readSpare(check, 0);
-//////
-////    eraseFlashPages(0, 1);
-////    memset(pages,0,2048);
-//    memset(check,0,64);
-////    HAL_Delay(20);
-////    readSpare(check, 0);
-//    readFlash(pages, 0, 1);
-//    eraseFlashDevice();
-////    memset(check,0,64);
-//    readSpare(check,0);
+
     size_t freeSpace= xPortGetFreeHeapSize();
-//    while(1){};
 
   /* USER CODE END 2 */
 
