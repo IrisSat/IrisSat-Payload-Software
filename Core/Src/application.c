@@ -490,14 +490,9 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	imageCaptureFlag = 0;//Make sure this is zero, since the vsync interrupt will set to 1 when the image is received.
 
 	CameraSoftReset();
-	vTaskDelay(pdMS_TO_TICKS(50));
-
 	CameraSensorInit();
+	StartSensorInJpegMode(0x258, 0x1E2);
 	vTaskDelay(pdMS_TO_TICKS(50));
-
-    StartSensorInJpegMode(600,480);
-    vTaskDelay(pdMS_TO_TICKS(50));
-
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_VSYNC);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_ERR);
@@ -524,7 +519,7 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 
 	//Now read in the size of the image...
 
-	uint32_t actualImageSize = 10;//Get actual value...
+	uint32_t actualImageSize = CheckJpegSize();//Get actual value...
 
 
 	//Next we should copy the image from RAM into a file in the file system. The file was opened at the start of this function...
