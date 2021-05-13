@@ -13,34 +13,41 @@ extern "C"
 #endif
 
 /*!
-    \brief                      This function initilizes the camera sensor
+ \brief                      This function initilizes the camera sensor
 
-    \param[in]                  None
+ \param[in]                  None
 
-    \return                     0 - Success
-                               -1 - Error
+ \return                     0 - Success
+ -1 - Error
 
-    \note
-    \warning
-*/
+ \note
+ \warning
+ */
 long CameraSensorInit();
 
 /*!
-    \brief                      Configures sensor in JPEG mode
+ \brief                      Configures sensor in JPEG mode
 
-    \param[in]                  None
+ \param[in]                  None
 
-    \return                     0 - Success
-                               -1 - Error
+ \return                     0 - Success
+ -1 - Error
 
-    \note
-    \warning
-*/
+ \note
+ \warning
+ */
+
+
 
 
 long StartSensorInJpegMode(int width, int height);
 long CameraSensorResolution(int width, int height);
+long I2CSelectVar(unsigned char PageNumber, unsigned short VarInt);
+long I2CWriteVar(unsigned char PageNumber, unsigned short VarInt,unsigned short VarValue);
+long I2CReadVar(unsigned char PageNumber, unsigned short VarInt,unsigned short *VarValue);
+
 void DoCapture();
+long CheckJpegSize();
 //*****************************************************************************
 //
 // Mark the end of the C bindings section for C++ compilers.
@@ -49,6 +56,5 @@ void DoCapture();
 #ifdef __cplusplus
 }
 #endif
-
 
 #endif //__MT9D111_H__

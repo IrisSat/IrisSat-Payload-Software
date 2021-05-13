@@ -16,10 +16,8 @@
 //#define OV5642_MINI_5MP_PLUS
 //#define OV5640_MINI_5MP_PLUS
 
-
 //#define ARDUCAM_SHIELD_REVC	
 //#define ARDUCAM_SHIELD_V2
-
 
 //Step 2: Select one of the camera module, only one at a time
 #if (defined(ARDUCAM_SHIELD_REVC) || defined(ARDUCAM_SHIELD_V2))
