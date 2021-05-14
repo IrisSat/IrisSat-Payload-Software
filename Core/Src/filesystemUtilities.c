@@ -155,7 +155,7 @@ int allocateImageFile(uint8_t * img_num){
 	}
 
 	char filename[20];
-	snprintf(filename,15,"%s/%d.%s",FILESYSTEM_ROOT,imageFileNumber,IMAGE_FORMAT_TYPE);
+	snprintf(filename,15,"%s/%02d.%s",FILESYSTEM_ROOT,imageFileNumber,IMAGE_FORMAT_TYPE);
 
 	int fd = yaffs_open(filename,O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
 

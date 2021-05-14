@@ -43,12 +43,12 @@ long CameraSensorResolution(int width, int height);
 long I2CSelectVar(unsigned char PageNumber, unsigned short VarInt);
 long I2CWriteVar(unsigned char PageNumber, unsigned short VarInt,unsigned short VarValue);
 long I2CReadVar(unsigned char PageNumber, unsigned short VarInt,unsigned short *VarValue);
-
+long CameraSoftReset();
 void DoCapture();
 uint32_t CheckJpegSize();
 
 
-#define JPEG_HEADER_SIZE	20
+#define JPEG_HEADER_SIZE	625
 extern uint8_t jpegHeader[JPEG_HEADER_SIZE]; //Fill in.
 
 #define JPEG_FOOTER_SIZE	2

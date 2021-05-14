@@ -407,6 +407,7 @@ void imageTransfer(void * pvParams){
 		}
 		vTaskDelay(pdMS_TO_TICKS(500));
 		for(int i=0; i< numChunks;i++){
+
 			int readSize = yaffs_read(file,&chunk[sizeof(uint32_t)],CHUNKSIZE);
 			*((uint32_t*)&chunk[0]) = i*CHUNKSIZE; //Send the position (in bytes) where this packet belongs.
 			telemetryPacket_t telemetry;
@@ -416,7 +417,7 @@ void imageTransfer(void * pvParams){
 			telemetry.data = chunk;
 
 			sendTelemetryAddr(&telemetry,GROUND_CSP_ADDRESS);
-			vTaskDelay(10);
+			vTaskDelay(250);
 		}
 
 		yaffs_close(file);
@@ -555,16 +556,16 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	}
 
 	//If jpeg header is in an array of size jpegHeaderSize:
-	yaffs_write(file, jpegHeader, JPEG_HEADER_SIZE);
+	int res = yaffs_write(file, jpegHeader, JPEG_HEADER_SIZE);
 
 	//Can we write in one go? let's try...
-	yaffs_write(file,jpeg_buffer,actualImageSize);
+	res = yaffs_write(file,jpeg_buffer,actualImageSize);
 
 	//add the 2 byte jpeg footer.
-	yaffs_write(file,jpegFooter, JPEG_FOOTER_SIZE);
+	res = yaffs_write(file,jpegFooter, JPEG_FOOTER_SIZE);
 
 	//Very important, close the file.
-	yaffs_close(file);
+	res = yaffs_close(file);
 
 
 	//Once the image is taken, we should send a message to CDH to let it know it can request the image transfer.
