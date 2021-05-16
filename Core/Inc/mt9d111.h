@@ -46,7 +46,8 @@ long I2CReadVar(unsigned char PageNumber, unsigned short VarInt,unsigned short *
 long CameraSoftReset();
 void DoCapture();
 uint32_t CheckJpegSize();
-
+uint32_t checkResolutionWidth();
+uint32_t checkResolutionHeight();
 
 #define JPEG_HEADER_SIZE	625
 extern uint8_t jpegHeader[JPEG_HEADER_SIZE]; //Fill in.

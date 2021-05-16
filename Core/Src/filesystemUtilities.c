@@ -50,7 +50,7 @@ void startupFilesystem(){
 	//Mount the file system.
 	int result = yaffs_mount(FILESYSTEM_ROOT);
 
-	if(result != 1){
+	if(result != 0){
 
 		telemetryPacket_t t;
 		Calendar_t now = {0}; //Set to zero, since payload does not keep track of time. CDH will timestamp on receipt.
@@ -95,7 +95,7 @@ void startupFilesystem(){
 	//This file will keep track of how many times the system has started up/reset.
 	int fd = yaffs_open(BOOTCOUNT_FILE_PATH,O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
 
-	if(fd>0){
+	if(fd>=0){
 
 		int runCount;
 		char runCountStr[4];

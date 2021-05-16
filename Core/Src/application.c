@@ -30,6 +30,7 @@ void resetCamera(uint8_t camNum);
 
 QueueHandle_t imageSendQueue;
 volatile uint8_t imageCaptureFlag =0;
+volatile uint32_t linecount = 0;
 
 static uint32_t img_size = 50000;
 uint32_t jpeg_buffer[50000] = {0};
@@ -356,7 +357,7 @@ void imageTransfer(void * pvParams){
 	int file;
 	uint32_t size = 0;
 	uint32_t numChunks =0;
-	uint8_t chunk[CHUNKSIZE+sizeof(uint32_t)];
+	uint8_t chunk[CHUNKSIZE+sizeof(uint32_t)] = {0};
 	char name[15];
 	uint8_t fileNum;
 
@@ -417,7 +418,7 @@ void imageTransfer(void * pvParams){
 			telemetry.data = chunk;
 
 			sendTelemetryAddr(&telemetry,GROUND_CSP_ADDRESS);
-			vTaskDelay(250);
+			vTaskDelay(200);
 		}
 
 		yaffs_close(file);
@@ -492,10 +493,11 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 
 	CameraSoftReset();
 	CameraSensorInit();
-	StartSensorInJpegMode(0x258, 0x1E2);
+	StartSensorInJpegMode(1600	, 1200);
 	vTaskDelay(pdMS_TO_TICKS(50));
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_VSYNC);
+	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_LINE);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_ERR);
 //HAL_DCMI_StateTypeDef	retval = HAL_DCMI_GetState(&hdcmi);
 
@@ -521,15 +523,17 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	//Now read in the size of the image...
 
 	uint32_t actualImageSize = CheckJpegSize();//Get actual value...
-
+	uint32_t width = checkResolutionWidth();
+	uint32_t height= checkResolutionHeight();
 
 	//Next we should copy the image from RAM into a file in the file system. The file was opened at the start of this function...
 	//This is also where we flip some of the data bits to solve the hardware problem with MUX.
 	//Make sure to remove bit flips in the final version of the software!
 
+	uint32_t numberOfLines = linecount;
 	//Flip the bits. Data 0 and 1 are flipped as well as data 4 and 5.
 	//There is a test program in Tests/ that can be run on a PC, showing the logic is correct.
-	for(int i=0; i<actualImageSize;i++){
+	for(int i=0; i<actualImageSize/4;i++){
 
         uint32_t temp = jpeg_buffer[i];
         uint8_t LeftByte = (temp>>24) & 0xFF; //The left most byte. XX_YY_ZZ_AA >> 24 == 00_00_00_XX.
@@ -553,6 +557,16 @@ void takeImage(uint8_t camNum,Calendar_t * time){
         uint32_t newByte = (new_LB << 24) + (new_MLB << 16) + (new_MRB <<8) + new_RB;
 
         jpeg_buffer[i] = newByte;
+	}
+
+	uint32_t restartCoutn =0;
+	for(int i=0; i< (50000-1);i++){
+
+		uint8_t temp1 = jpeg_buffer[i];
+		uint8_t temp2 = jpeg_buffer[i+1];
+		if(temp1 == 0xFF && (temp2>= 0xD0 && temp2<= 0xD7)){
+			restartCoutn ++;
+		}
 	}
 
 	//If jpeg header is in an array of size jpegHeaderSize:
@@ -662,5 +676,14 @@ void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
 
 	//Set the flag so the main loop knows we have a complete image.
 	imageCaptureFlag = 1;
+
+}
+void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+	//Stop DCMI. Not sure if needed, but if not maybe this will still save power?
+//	HAL_DCMI_Stop(hdcmi);
+
+	//Set the flag so the main loop knows we have a complete image.
+	linecount++;
 
 }

@@ -76,7 +76,7 @@ uint8_t jpegHeader[JPEG_HEADER_SIZE] =
   0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13,
   0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13,
   0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x04,
-  0x80, 0x06, 0x40, 0x03, 0x00, 0x21, 0x00, 0x01, 0x11, 0x01, 0x02, 0x11, 0x01, 0xff, 0xc4, 0x00,
+  0xB0, 0x06, 0x40, 0x03, 0x00, 0x21, 0x00, 0x01, 0x11, 0x01, 0x02, 0x11, 0x01, 0xff, 0xc4, 0x00,
   0x1f, 0x00, 0x00, 0x01, 0x05, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0xff, 0xc4,
   0x00, 0xb5, 0x10, 0x00, 0x02, 0x01, 0x03, 0x03, 0x02, 0x04, 0x03, 0x05, 0x05, 0x04, 0x04, 0x00,
@@ -213,7 +213,7 @@ static const s_RegList capture_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disable P
 		{ 1, 0xC6, 0xA102 },  // SEQ_MODE
 		{ 1, 0xC8, 0x0005 },  // SEQ_MODE
 		{ 1, 0xC6, 0xA120 },  // Enable Capture video <<----now set to capture, not video)
-		{ 1, 0xC8, 0x0001 }, /////<<=======================================================originally 0x0002
+		{ 1, 0xC8, 0x0001 },//001 for snapshot /////<<=======================================================originally 0x0002
 		{ 1, 0xC6, 0x270B },  // Mode config, disable JPEG bypass
 		{ 1, 0xC8, 0x0000 }, { 1, 0xC6, 0x2702 }, // FIFO_config0b, no spoof, adaptive clock
 		{ 1, 0xC8, 0x001E }, { 1, 0xC6, 0xA907 },  // JPEG mode config, video <<---Now single frame)
@@ -240,7 +240,18 @@ static s_RegList stop_jpeg_capture_cmd_list[] = { { 1, 0xC6, 0xA103 }, // SEQ_CM
 		};
 
 static s_RegList check_jpeg_size_cmd_list[] = {
-		{ 1, 0xC6, 0x2910 }, { 222, 0xC8, 0x0000}
+		{ 1, 0xC6, 0x2910 }, { 222, 0xC8, 0x0000},
+		{ 100, 0x00, 0x05F4 },
+		{ 1, 0xC6, 0xa90f }, { 224, 0xC8, 0x0000}
+		};
+
+static s_RegList check_jpeg_width_cmd_list[] = {
+		{ 1, 0xC6, 0x2902 }, { 150, 0xC8, 0x0000}
+		};
+
+
+static s_RegList check_jpeg_height_cmd_list[] = {
+		{ 1, 0xC6, 0x2904 }, { 150, 0xC8, 0x0000}
 		};
 
 #define INDEX_CROP_X0           1
@@ -270,8 +281,8 @@ static s_RegList resolution_cmds_list[] = { { 100, 0x00, 0x01F4 }, // Delay =500
 
 static const s_RegList init_cmds_list[] = { { 100, 0x00, 0x01F4 }, { 0, 0x33,
 		0x0343 }, // RESERVED_CORE_33
-		//{ 1, 0xC6, 0xA115 }, // SEQ_LLMODE  <<
-		//{ 1, 0xC8, 0x0020 }, // SEQ_LLMODE  << Flips bit 6?? Nothing in data sheet for that
+		{ 1, 0xC6, 0xA115 }, // SEQ_LLMODE  <<
+		{ 1, 0xC8, 0x0020 }, // SEQ_LLMODE  << Flips bit 6?? Nothing in data sheet for that
 		{ 0, 0x38, 0x0866 }, // RESERVED_CORE_38
 		{ 2, 0x80, 0x0168 }, // LENS_CORRECTION_CONTROL
 		{ 2, 0x81, 0x6432 }, // ZONE_BOUNDS_X1_X2
@@ -452,6 +463,22 @@ uint32_t CheckJpegSize(){
 	return len;
 }
 
+uint32_t checkResolutionWidth(){
+
+	long lRetVal = -1;
+		uint32_t len = 0;
+		lRetVal = RegLstWriteLength((s_RegList *)check_jpeg_width_cmd_list,
+		                    sizeof(check_jpeg_width_cmd_list)/sizeof(s_RegList),&len);
+		return len;
+}
+uint32_t checkResolutionHeight(){
+
+	long lRetVal = -1;
+		uint32_t len = 0;
+		lRetVal = RegLstWriteLength((s_RegList *)check_jpeg_height_cmd_list,
+		                    sizeof(check_jpeg_height_cmd_list)/sizeof(s_RegList),&len);
+		return len;
+}
 //*****************************************************************************
 //
 //! This function initilizes the camera sensor
@@ -597,7 +624,7 @@ void MT9D111Delay(unsigned long ucDelay);
 static long RegLstWrite(s_RegList *pRegLst, unsigned long ulNofItems) {
 	unsigned long ulNdx;
 	unsigned short usTemp;
-	uint16_t usTemp2;
+	uint32_t usTemp2;
 	unsigned short usTemp3;
 	unsigned char i;
 	unsigned char ucBuffer[20], tempBuffer[20];
@@ -751,12 +778,13 @@ static long RegLstWrite(s_RegList *pRegLst, unsigned long ulNofItems) {
 static long RegLstWriteLength(s_RegList *pRegLst, unsigned long ulNofItems, uint32_t* length ) {
 	unsigned long ulNdx;
 	unsigned short usTemp;
-	uint16_t usTemp2;
+	uint32_t usTemp2;
 	unsigned short usTemp3;
 	unsigned char i;
 	unsigned char ucBuffer[20], tempBuffer[20];
 	unsigned long ulSize;
 	long lRetVal = -1;
+	uint8_t retries = 0;
 
 	if (pRegLst == NULL) {
 		return RET_ERROR;
@@ -800,7 +828,47 @@ static long RegLstWriteLength(s_RegList *pRegLst, unsigned long ulNofItems, uint
 
 					} while (usTemp2 == 0x00);
 					int b = 0;
-		}else if (pRegLst->ucPageAddr == 221) {
+		}else if (pRegLst->ucPageAddr == 224) {
+			// PageAddr == 111, wait for specified register value
+			do {
+				ucBuffer[0] = pRegLst->ucRegAddr;
+				lRetVal = HAL_I2C_Master_Transmit(&hi2c2, CAM_I2C_WRITE_ADDR,
+						ucBuffer, 1, 1);
+				//ASSERT_ON_ERROR(lRetVal);
+				if (HAL_I2C_Master_Receive(&hi2c2, CAM_I2C_READ_ADDR, ucBuffer,
+						2, 1)) {
+					return RET_ERROR;
+				}
+
+
+				usTemp2 |= ucBuffer[1] << 16;
+				//usTemp2 |= ucBuffer[1];
+				*length = usTemp2;
+
+				retries++;
+			} while (usTemp2 == 0x00 && retries<20);
+			int b = 0;
+		} else if (pRegLst->ucPageAddr == 150) {
+			// PageAddr == 111, wait for specified register value
+			do {
+				ucBuffer[0] = pRegLst->ucRegAddr;
+				lRetVal = HAL_I2C_Master_Transmit(&hi2c2, CAM_I2C_WRITE_ADDR,
+						ucBuffer, 1, 1);
+				//ASSERT_ON_ERROR(lRetVal);
+				if (HAL_I2C_Master_Receive(&hi2c2, CAM_I2C_READ_ADDR, ucBuffer,
+						2, 1)) {
+					return RET_ERROR;
+				}
+				usTemp2 = 0;
+
+				usTemp2 = ucBuffer[0] << 8;
+				usTemp2 |= ucBuffer[1];
+
+
+			} while (usTemp2 == 0x00);
+			int b = 0;
+			}
+		else if (pRegLst->ucPageAddr == 221) {
 			// PageAddr == 111, wait for specified register value
 			do {
 				ucBuffer[0] = 0xF0;
