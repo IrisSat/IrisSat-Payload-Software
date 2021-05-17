@@ -31,9 +31,10 @@ void resetCamera(uint8_t camNum);
 QueueHandle_t imageSendQueue;
 volatile uint8_t imageCaptureFlag =0;
 volatile uint32_t linecount = 0;
+volatile uint16_t jpegstatus=0xFF;
 
-static uint32_t img_size = 50000;
-uint32_t jpeg_buffer[50000] = {0};
+static uint32_t img_size = 70000;
+uint32_t jpeg_buffer[70000] = {0};
 
 void commandHandler(void * pvparams){
 
@@ -493,8 +494,8 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 
 	CameraSoftReset();
 	CameraSensorInit();
-	StartSensorInJpegMode(1600	, 1200);
-	vTaskDelay(pdMS_TO_TICKS(50));
+	StartSensorInJpegMode(640	, 480);
+	vTaskDelay(pdMS_TO_TICKS(500));
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_VSYNC);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_LINE);
@@ -560,10 +561,12 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	}
 
 	uint32_t restartCoutn =0;
-	for(int i=0; i< (50000-1);i++){
+	uint8_t* jpeg_buffer_byte = (uint8_t*) jpeg_buffer;
 
-		uint8_t temp1 = jpeg_buffer[i];
-		uint8_t temp2 = jpeg_buffer[i+1];
+	for(int i=0; i< (img_size-1);i++){
+
+		uint8_t temp1 = jpeg_buffer_byte[i];
+		uint8_t temp2 = jpeg_buffer_byte[i+1];
 		if(temp1 == 0xFF && (temp2>= 0xD0 && temp2<= 0xD7)){
 			restartCoutn ++;
 		}
@@ -665,7 +668,10 @@ void resetCamera(uint8_t camNum){
 
 void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
-	//HAL_DCMI_Stop(hdcmi);
+	HAL_DCMI_Stop(hdcmi);
+
+
+
 	imageCaptureFlag = 1;
 
 }
@@ -673,9 +679,21 @@ void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
 	//Stop DCMI. Not sure if needed, but if not maybe this will still save power?
 	HAL_DCMI_Stop(hdcmi);
+	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_FRAME);
+	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_VSYNC);
+	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_LINE);
+	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_ERR);
+
+	jpegstatus = checkJpegStatus();
+	doHandshake();
+	jpegstatus = checkJpegStatus();
 
 	//Set the flag so the main loop knows we have a complete image.
 	imageCaptureFlag = 1;
+
+
+
+
 
 }
 void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)

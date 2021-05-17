@@ -48,6 +48,9 @@ void DoCapture();
 uint32_t CheckJpegSize();
 uint32_t checkResolutionWidth();
 uint32_t checkResolutionHeight();
+uint16_t checkJpegStatus();
+void doHandshake();
+
 
 #define JPEG_HEADER_SIZE	625
 extern uint8_t jpegHeader[JPEG_HEADER_SIZE]; //Fill in.

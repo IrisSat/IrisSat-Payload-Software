@@ -108,6 +108,37 @@ uint8_t jpegHeader[JPEG_HEADER_SIZE] =
   0x00
 };
 
+const uint16_t patch_addr_0400[206]  = {
+  0x0400,
+  0x00cc,
+  0xce06, 0x10ed, 0x0230, 0xec00, 0xce06, 0x10ed, 0x00ce, 0x0610,
+  0xec04, 0xc300, 0x01ed, 0x04ce, 0x1070, 0xc603, 0xe70f, 0xc611,
+  0xe740, 0xc680, 0xe742, 0xc603, 0xe701, 0xc6fe, 0xe74c, 0xc600,
+  0xe71a, 0xe71b, 0xe710, 0xe712, 0xc680, 0xe711, 0xc680, 0xe713,
+  0xc601, 0xe744, 0xc6fe, 0xe746, 0x39ce, 0x0620, 0xed02, 0x30ec,
+  0x00ce, 0x0620, 0xed00, 0xce06, 0x20e6, 0x05cb, 0x01c4, 0x7fe7,
+  0x05ce, 0x0720, 0x3a18, 0xce06, 0x2018, 0xe603, 0xe700, 0x3c34,
+  0xce01, 0x0de6, 0x03e7, 0x04ce, 0x0620, 0xe603, 0xce01, 0x0de7,
+  0x03ce, 0x1070, 0xc602, 0xe703, 0xc6ff, 0xe746, 0xc601, 0xe745,
+  0x18ce, 0x010d, 0x18e6, 0x034f, 0xc300, 0x0105, 0xed10, 0x18e6,
+  0x034f, 0x1830, 0x18ed, 0x01cc, 0x0101, 0x18a3, 0x0105, 0xed12,
+  0xc600, 0xe745, 0xc6fe, 0xe746, 0xc602, 0xe703, 0x4fcc, 0x0050,   // 50 is time needed for lens setling
+  0xbd9b, 0x1118, 0xce01, 0x0d18, 0xe605, 0xca02, 0x18e7, 0x0530,
+  0xc603, 0x3a35, 0x39ce, 0x0630, 0xed02, 0x30ec, 0x00ce, 0x0630,
+  0xed00, 0xce06, 0x30ec, 0x08c3, 0x0001, 0xed08, 0x39ce, 0x0640,
+  0xed02, 0x30ec, 0x00ce, 0x0640, 0xed00, 0xcc06, 0x40ec, 0x08c3,
+  0x0001, 0xed08, 0xbd9c, 0x43c1, 0x0126, 0x1218, 0xce01, 0x0d18,
+  0xe605, 0xf400, 0xfd18, 0xe705, 0xce06, 0x40e7, 0x04ce, 0x0640,
+  0xe704, 0x18ce, 0x010d, 0x18e6, 0x0539, 0x3c3c, 0x3c3c, 0x34cc,
+  0x02c4, 0x30ed, 0x06fe, 0x1050, 0xec0c, 0xfd02, 0xc0fe, 0x02c0,
+  0xec00, 0xfd02, 0xc230, 0x6f08, 0xe608, 0x4f05, 0xf302, 0xc28f,
+  0xec00, 0x30ed, 0x00e6, 0x084f, 0x05e3, 0x0618, 0x8fec, 0x0018,
+  0xed00, 0x6c08, 0xe608, 0xc104, 0x25de, 0x30ee, 0x06cc, 0x0400,
+  0xed00, 0x30ee, 0x06cc, 0x0449, 0xed02, 0x30ee, 0x06cc, 0x04d5,
+  0xed04, 0x30ee, 0x06cc, 0x04ed, 0xed06, 0xcc02, 0xc4fe, 0x010d,
+  0xed00, 0x30c6, 0x093a, 0x3539
+};
+
 
 uint8_t jpegFooter[JPEG_FOOTER_SIZE] = {0xFF, 0xD9};
 
@@ -230,10 +261,37 @@ static s_RegList start_jpeg_capture_cmd_list[] = {
 		{ 1, 0xC8, 0x0002 },
 		{ 2, 0x02,0x0001},
 		{ 100, 0x00, 0x05F4 },  // Delay
-		{ 221, 0x02,0x0000},
+
 
 		{ 100, 0x00, 0x01F4 },  // Delay =500ms
 		};
+
+static s_RegList get_jpeg_status[] = {
+
+		{ 221, 0x02,0x0000}
+
+};
+
+static s_RegList set_adaptive_clock_divisors[]={
+
+		{1, 0xC6, 0x2772},
+		{1,0xC8,40},
+
+		{ 100, 0x00, 0x05F4 },
+
+		{1,0xC6,0x2774},
+		{1,0xC8,20},
+
+		{ 100, 0x00, 0x05F4 },
+
+		{1,0xC6, 0x8776},
+		{1,0xC8,10}
+
+
+};
+
+static s_RegList handshake_cmd[] = {{ 1, 0xC6, 0xA907 },  // JPEG mode config, video <<---Now single frame)
+		{ 1, 0xC8, 0x003C }};
 
 static s_RegList stop_jpeg_capture_cmd_list[] = { { 1, 0xC6, 0xA103 }, // SEQ_CMD, Do capture
 		{ 1, 0xC8, 0x0001 }, { 100, 0x00, 0x01F4 },  // Delay =500ms
@@ -419,12 +477,56 @@ void MX_I2C2_Init(void);
 //
 //*****************************************************************************
 
+void applyPatch(){
+//
+//	  uint16_t  start, size, data, offreg;
+//	  uint16_t  pdata;
+//	  int offset;
+//
+//	  //start = patch[0];   // start MCU_ADDRESS
+//	  start = patch_addr_0400[0];
+//	  //size = patch[1];    // data size
+//	  size = patch_addr_0400[1];
+//	  pdata = 2;     // data pointer
+//	  offset = 0;         // MCU_DATA_0,7
+//
+//	  wrSensorReg8_16( 0xF0, 0x01);
+//	  while (size > 0)
+//	  {
+//	    if (offset == 0)
+//	    {
+//	      //mi2010soc_reg_write(0x1C6, start);  // write MCU_ADDRESS
+//	      myCAM.wrSensorReg8_16( 0xC6, start);
+//	      //printk(KERN_INFO "REG=1, 0xC6, 0x%04X t// MCU_ADDRESSn", start);
+//	    }
+//	    //data = *pdata++;
+//	    data = pgm_read_word(&patch_addr_0400[pdata++]);
+//	    //offreg = 0x1C8 + offset;
+//	    //mi2010soc_reg_write(offreg, data);  // write MCU_ADDRESS
+//
+//	    //addr = 0x2003;
+//	    //myCAM.wrSensorReg8_16( 0xC6, addr);
+//	    myCAM.wrSensorReg8_16( 0xC8 + offset, data);
+//	    //printk(KERN_INFO "REG=1, 0x%02X, 0x%04X t// MCU_DATA_%dn", offreg&0xff, data, offset);
+//	    start += 2;
+//	    size--;
+//	    offset++;
+//	    if (offset == 8)
+//	      offset = 0;
+//	  }
+//	  return;
+
+}
+
 long CameraSensorInit() {
 	long lRetVal = -1;
 
 	lRetVal = RegLstWrite((s_RegList*) init_cmds_list,
 			sizeof(init_cmds_list) / sizeof(s_RegList));
 	//ASSERT_ON_ERROR(lRetVal);
+
+//	RegLstWrite((s_RegList*) set_adaptive_clock_divisors,
+//				sizeof(set_adaptive_clock_divisors) / sizeof(s_RegList));
 
 #ifndef ENABLE_JPEG
     //lRetVal = RegLstWrite((s_RegList *)preview_cmds_list,
@@ -460,6 +562,15 @@ uint32_t CheckJpegSize(){
 	uint32_t len = 0;
 	lRetVal = RegLstWriteLength((s_RegList *)check_jpeg_size_cmd_list,
 	                    sizeof(check_jpeg_size_cmd_list)/sizeof(s_RegList),&len);
+	return len;
+}
+
+uint16_t checkJpegStatus(){
+
+	long lRetVal = -1;
+	uint32_t len = 0;
+	lRetVal = RegLstWriteLength((s_RegList *)get_jpeg_status,
+	                    sizeof(get_jpeg_status)/sizeof(s_RegList),&len);
 	return len;
 }
 
@@ -571,6 +682,11 @@ long CameraSensorResolution(int width, int height) {
 	return 0;
 }
 
+void doHandshake(){
+
+	RegLstWrite((s_RegList*) handshake_cmd,
+			sizeof(handshake_cmd) / sizeof(s_RegList));
+}
 void DoCapture() {
 	long lRetVal = RegLstWrite((s_RegList*) start_jpeg_capture_cmd_list,
 			sizeof(start_jpeg_capture_cmd_list) / sizeof(s_RegList));
@@ -638,7 +754,7 @@ static long RegLstWrite(s_RegList *pRegLst, unsigned long ulNofItems) {
 	for (ulNdx = 0; ulNdx < ulNofItems; ulNdx++) {
 		if (pRegLst->ucPageAddr == 100) {
 			//PageAddr == 100, insret a delay equal to reg value
-			vTaskDelay(pRegLst->usValue);
+			HAL_Delay(pRegLst->usValue);
 		} else if (pRegLst->ucPageAddr == 111) {
 			// PageAddr == 111, wait for specified register value
 			do {
@@ -769,7 +885,7 @@ static long RegLstWrite(s_RegList *pRegLst, unsigned long ulNofItems) {
 		}
 
 		pRegLst++;
-		vTaskDelay(10);
+		HAL_Delay(10);
 	}
 
 	return RET_OK;
@@ -793,7 +909,7 @@ static long RegLstWriteLength(s_RegList *pRegLst, unsigned long ulNofItems, uint
 	for (ulNdx = 0; ulNdx < ulNofItems; ulNdx++) {
 		if (pRegLst->ucPageAddr == 100) {
 			//PageAddr == 100, insret a delay equal to reg value
-			vTaskDelay(pRegLst->usValue);
+			HAL_Delay(pRegLst->usValue);
 		} else if (pRegLst->ucPageAddr == 111) {
 			// PageAddr == 111, wait for specified register value
 			do {
@@ -893,8 +1009,9 @@ static long RegLstWriteLength(s_RegList *pRegLst, unsigned long ulNofItems, uint
 
 				usTemp3 = ucBuffer[0] << 8;
 				usTemp3 |= ucBuffer[1];
+				retries++;
 			}
-			while (usTemp3 == 0x00);
+			while (usTemp3 == 0x00  && retries<20);
 
 			int d = 2+7;
 			int e = d*2;
@@ -964,7 +1081,7 @@ static long RegLstWriteLength(s_RegList *pRegLst, unsigned long ulNofItems, uint
 		}
 
 		pRegLst++;
-		vTaskDelay(10);
+		HAL_Delay(10);
 	}
 
 	return RET_OK;
