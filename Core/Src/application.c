@@ -491,6 +491,7 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	//Capture the image.
 
 	imageCaptureFlag = 0;//Make sure this is zero, since the vsync interrupt will set to 1 when the image is received.
+	linecount = 0;
 
 	CameraSoftReset();
 	CameraSensorInit();

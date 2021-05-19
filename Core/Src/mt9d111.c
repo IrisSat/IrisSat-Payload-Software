@@ -272,6 +272,13 @@ static s_RegList get_jpeg_status[] = {
 
 };
 
+static s_RegList setup_spoof_mode[] = {
+
+		{2,0x0D,0x0045},//Enable spoof, no pclk between frames,enable variable pclk.
+		{2,0x10,400}, // Sppof frame width. So the number of bytes per line... Should be mulitple of 4!
+		{2,0x11,600}, //Spoof frame height. Height*width should contain enough bytes for entire image... and should be less than the jpeg_buffer size(in bytes).
+};
+
 static s_RegList set_adaptive_clock_divisors[]={
 
 		{1, 0xC6, 0x2772},
@@ -637,6 +644,10 @@ long StartSensorInJpegMode(int width, int height) {
 	resolution_cmds_list[INDEX_SIZE_HEIGHT].usValue = height;
 	lRetVal = RegLstWrite((s_RegList*) resolution_cmds_list,
 			sizeof(resolution_cmds_list) / sizeof(s_RegList));
+
+	//Setup spoof mode.
+	RegLstWrite((s_RegList*)setup_spoof_mode,sizeof(setup_spoof_mode)/sizeof(s_RegList));
+
 	//ASSERT_ON_ERROR(lRetVal);
 
 	//lRetVal = RegLstWrite((s_RegList*) start_jpeg_capture_cmd_list,
