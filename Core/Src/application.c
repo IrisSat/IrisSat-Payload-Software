@@ -471,6 +471,13 @@ void rx_image(uint8_t * chunk,uint16_t size,uint16_t num){
 
 void takeImage(uint8_t camNum,Calendar_t * time){
 
+	powerCamera(2, 0);
+
+	HAL_Delay(1000);
+	powerCamera(2,1);
+
+	resetCamera(2);
+
 	uint8_t imageNum;
 	//Find which file we want to save to....
 	int file = allocateImageFile(&imageNum);
@@ -532,6 +539,9 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	//Make sure to remove bit flips in the final version of the software!
 
 	uint32_t numberOfLines = linecount;
+
+	uint32_t status = checkJpegStatus();
+
 	//Flip the bits. Data 0 and 1 are flipped as well as data 4 and 5.
 	//There is a test program in Tests/ that can be run on a PC, showing the logic is correct.
 	for(int i=0; i<actualImageSize/4;i++){
@@ -643,11 +653,11 @@ void powerCamera(uint8_t camNum, uint8_t onOrOff){
 	}
 	else if(camNum == 2 && onOrOff == 0){
 		//Power off camera 2.
-		//HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
+		HAL_GPIO_WritePin(GPIOE, 2, 0);
 	}
 	else if(camNum == 2 && onOrOff == 1){
 		//Power on camera 2.
-		//HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
+		HAL_GPIO_WritePin(GPIOE,2, 1);
 	}
 
 
@@ -660,8 +670,11 @@ void resetCamera(uint8_t camNum){
 		//HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
 	}
 	else if (camNum == 2){
-		//Reset Camera 2.
-		//HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
+		//Reset Camera 1 (camera 1 pins) Needs to switch with CAM 2.
+		HAL_GPIO_WritePin(GPIOA, 3, 0);
+		HAL_Delay(1);
+		HAL_GPIO_WritePin(GPIOA, 3, 1);
+		HAL_Delay(1);
 	}
 
 }
@@ -678,18 +691,26 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
 {
 	//Stop DCMI. Not sure if needed, but if not maybe this will still save power?
-	HAL_DCMI_Stop(hdcmi);
-	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_FRAME);
-	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_VSYNC);
-	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_LINE);
-	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_ERR);
+	//HAL_DCMI_Stop(hdcmi);
+//	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_FRAME);
+//	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_VSYNC);
+//	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_LINE);
+//	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_ERR);
+		HAL_DCMI_Stop(hdcmi);
+			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_FRAME);
+			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_VSYNC);
+			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_LINE);
+			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_ERR);
 
-	jpegstatus = checkJpegStatus();
-	doHandshake();
-	jpegstatus = checkJpegStatus();
+			jpegstatus = checkJpegStatus();
+			doHandshake();
+			jpegstatus = checkJpegStatus();
+
+
+
 
 	//Set the flag so the main loop knows we have a complete image.
-	imageCaptureFlag = 1;
+	imageCaptureFlag  == 1;
 
 
 
