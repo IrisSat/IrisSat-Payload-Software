@@ -471,12 +471,12 @@ void rx_image(uint8_t * chunk,uint16_t size,uint16_t num){
 
 void takeImage(uint8_t camNum,Calendar_t * time){
 
-	powerCamera(2, 0);
-
-	HAL_Delay(1000);
-	powerCamera(2,1);
-
-	resetCamera(2);
+//	powerCamera(2, 0);
+//
+//	HAL_Delay(1000);
+//	powerCamera(2,1);
+//
+//	resetCamera(2);
 
 	uint8_t imageNum;
 	//Find which file we want to save to....
@@ -594,7 +594,32 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	//Very important, close the file.
 	res = yaffs_close(file);
 
+	char filename[20];
+	snprintf(filename,15,"%s/%02d.%s",FILESYSTEM_ROOT,imageNum,IMAGE_FORMAT_TYPE);
 
+	int checkFile = yaffs_open(filename,O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
+
+	uint32_t errorCount=0;
+//	jpeg_buffer_byte[1717] = 0xAA;
+	for(int i=0; i<actualImageSize/1024;i++){
+
+		uint8_t fileData[1024];
+		if(i==0){
+			yaffs_read(checkFile,&fileData[0],625);
+		}
+		int readSize = yaffs_read(checkFile,&fileData[0],1024);
+
+		for(int j=0;j<readSize;j++){
+
+			if(jpeg_buffer_byte[i*1024+j] != fileData[j]){
+
+				errorCount++;
+			}
+		}
+
+
+	}
+	yaffs_close(checkFile);
 	//Once the image is taken, we should send a message to CDH to let it know it can request the image transfer.
 	//We let CDH know some metadata as well: image number and the size.CDH should already know which camera, and the timestamp.
 	telemetryPacket_t t;

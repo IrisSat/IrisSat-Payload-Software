@@ -236,7 +236,9 @@ static  const s_RegList preview_cmds_list[]= {
 static const s_RegList capture_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disable PLL
 		{ 0, 0x65, 0xE000 },  // Power DOWN PLL
 		{ 100, 0x00, 0x01F4 },  // Delay =500ms
-		{ 0, 0x66, 0x500B }, { 0, 0x67, 0x0500 }, { 0, 0x65, 0xA000 }, // Disable PLL
+		{ 0, 0x66, 0x5003 }, // M=80 N =3 (before =11) -> 50MHz
+		{ 0, 0x67, 0x050C }, // P = 0
+		{ 0, 0x65, 0xA000 }, // Disable PLL
 		{ 0, 0x65, 0x2000 },  // Enable PLL
 		{ 0, 0x20, 0x0000 },  // READ_MODE_B (Image flip settings)
 		{ 100, 0x00, 0x01F4 },  // Delay =500ms
@@ -254,9 +256,9 @@ static const s_RegList capture_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disable P
 		{ 1, 0xC6, 0x2772 }, // FIFO_config0b, no spoof, adaptive clock
 		{ 1, 0xC8, 0x005F },
 		{1,0xC6, 0x2779},
-		{1,0xC8,1100}, //Spoof width
+		{1,0xC8,1104}, //Spoof width
 		{1,0xC6,0x277B},
-		{1,0xC8, 47},//Spoof height
+		{1,0xC8, 21},//Spoof height
 
 		{ 1, 0xC6, 0xA907 },  // JPEG mode config, video <<---Now single frame)
 		{ 1, 0xC8, 0x0056 },  // Format YCbCr422

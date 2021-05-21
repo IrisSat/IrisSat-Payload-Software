@@ -189,6 +189,8 @@ int allocateImageFile(uint8_t * img_num){
 
 		sendTelemetry(&t);
 
+		*img_num = imageFileNumber;
+
 		imageFileNumber ++;
 
 		return fd;
