@@ -131,7 +131,7 @@ import utils
 ################################################################
 # libcsp
 print("Downloading libcsp...")
-version_libcsp = "track-8faf353" # tracks c9c177e commit of upstream with an additional bug fix for get_csp_can_queue track-8faf353
+version_libcsp = "track-4a9d" # tracks 49ad commit which adds endian selection needed to build for stm32 hard floating point without error.
 utils.download_git_branch(version_libcsp, " https://github.com/IrisSat/libcsp", libraries_path, "libcsp")
 
 print("Building libcsp...")
@@ -148,9 +148,9 @@ try:
 
     os.chdir(f"{libraries_path}/libcsp")
     print("configuring...")
-    subprocess.run(f'python waf configure --toolchain=arm-none-eabi- --enable-if-can --with-os=freertos --includes="{INCLUDES}"', shell=True, check=True)
+    subprocess.run(f'python waf2 configure --toolchain=arm-none-eabi- --endian=little --enable-if-can --with-os=freertos --includes="{INCLUDES}"', shell=True, check=True)
     print("building...")
-    subprocess.run('python waf build', shell=True, check=True)
+    subprocess.run('python waf2 build', shell=True, check=True)
 
 finally:
     os.chdir(repository_dir)
