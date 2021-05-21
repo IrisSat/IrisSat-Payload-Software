@@ -247,7 +247,7 @@ static const s_RegList capture_raw_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disab
 		{ 1, 0xC6, 0xA120 },  // Enable Capture video <<----now set to capture, not video)
 		{ 1, 0xC8, 0x0001 },//001 for snapshot /////<<=======================================================originally 0x0002
 		{ 1, 0xC6, 0x270B },  // Mode config, enable JPEG bypass
-		{ 1, 0xC8, 0x0018 },	//bit 4 and 5 are jpeg bypass for context a/b.
+		{ 1, 0xC8, 0x0030 },	//bit 4 and 5 are jpeg bypass for context a/b.
 		{ 1, 0xC6, 0x2702 }, // FIFO_config0b, no spoof, adaptive clock
 		{ 1, 0xC8, 0x001E },
 		{ 1, 0xC6,0x277E}, //Output format config context B
@@ -368,7 +368,7 @@ static s_RegList resolution_cmds_list[] = {
 		{ 1, 0xC6, 0x2735 }, //MODE_CROP_X0_A   <<Actually B
 		{ 1, 0xC8, 0x0000 }, //MODE_CROP_X0_A   <<Actually B
 		{ 1, 0xC6, 0x2737 }, //MODE_CROP_X1_A   <<Actually B
-		{ 1, 0xC8, 1600,  }, //MODE_CROP_X1_A   <<Actually B ////originally 1600
+		{ 1, 0xC8, 1600  }, //MODE_CROP_X1_A   <<Actually B ////originally 1600
 		{ 1, 0xC6, 0x2739 }, //MODE_CROP_Y0_A   <<Actually B
 		{ 1, 0xC8, 0x0000 }, //MODE_CROP_Y0_A   <<Actually B
 		{ 1, 0xC6, 0x273B }, //MODE_CROP_Y1_A   <<Actually B
@@ -377,9 +377,9 @@ static s_RegList resolution_cmds_list[] = {
 		{ 1, 0xC8, 0x0005 },
 
 		{ 1, 0xC6, 0x2707 }, //MODE_OUTPUT_WIDTH_B <<correct
-		{ 1, 0xC8, 1600 }, //MODE_OUTPUT_WIDTH_B
+		{ 1, 0xC8, 320 }, //MODE_OUTPUT_WIDTH_B
 		{ 1, 0xC6, 0x2709 }, //MODE_OUTPUT_HEIGHT_B <<correct
-		{ 1, 0xC8, 1200 }, //MODE_OUTPUT_HEIGHT_B
+		{ 1, 0xC8, 240 }, //MODE_OUTPUT_HEIGHT_B
 		};
 //#endif
 
@@ -456,9 +456,9 @@ static const s_RegList init_cmds_list[] = { { 100, 0x00, 0x01F4 }, { 0, 0x33,
 		{ 1, 0xC8, 0x0005 }, // SEQ_CMD
 		{ 1, 0xC6, 0xA104 }, // SEQ_CMD
 		{ 111, 0xC8, 0x0003 },
-		{ 1, 0x08, 0x01FC }, // COLOR_PIPELINE_CONTROL
-		{ 1, 0x08, 0x01EC }, // COLOR_PIPELINE_CONTROL
-		{ 1, 0x08, 0x01FC }, // COLOR_PIPELINE_CONTROL
+		{ 1, 0x08, 0x00FC }, // COLOR_PIPELINE_CONTROL
+		{ 1, 0x08, 0x00EC }, // COLOR_PIPELINE_CONTROL
+		{ 1, 0x08, 0x00FC }, // COLOR_PIPELINE_CONTROL
 		{ 1, 0x36, 0x0F08 }, // APERTURE_PARAMETERS
 		{ 1, 0xC6, 0xA103 }, // SEQ_CMD
 		{ 1, 0xC8, 0x0005 }, // SEQ_CMD
@@ -493,8 +493,8 @@ static const s_RegList Ryans_Massive_cmds_list[] = {
 		{ 1, 0xC8, 0x0000 }, //MODE_CROP_Y0_A   <<Actually B
 		{ 1, 0xC6, 0xA73B }, //MODE_CROP_Y1_A   <<Actually B
 		{ 1, 0xC8, 240 }, //MODE_CROP_Y1_A   <<Actually B
-		{ 1, 0xC6, 0xA702 }, //MODE_CROP_Y1_A   <<Actually B
-		{ 1, 0xC8, 0x0001 }, //MODE_CROP_Y1_A   <<Actually B
+//		{ 1, 0xC6, 0xA702 }, //Context switch to B. WHY?
+//		{ 1, 0xC8, 0x0001 },
 		{ 1, 0xC6, 0x2133 }, //Set_Num_Frames
 		{ 1, 0xC8, 0x0001 }, //to 1
 //		{ 1, 0xC6, 0x2103 }, //Set_Num_Frames

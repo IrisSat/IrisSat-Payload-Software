@@ -122,6 +122,7 @@ int main(void)
   MX_I2C2_Init();
   MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
+  //FIX CAN PINS!!! SHOULD BE 12 and 13...
   HAL_CAN_MspInit(&hcan2);
   MX_CAN2_Init();
 

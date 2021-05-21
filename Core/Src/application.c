@@ -36,8 +36,8 @@ volatile uint8_t imageCaptureFlag =0;
 volatile uint32_t linecount = 0;
 volatile uint16_t jpegstatus=0xFF;
 
-static uint32_t img_size = 70000;
-uint32_t jpeg_buffer[70000] = {0};
+static uint32_t img_size = 153600;
+uint32_t jpeg_buffer[38400] = {0};
 
 void commandHandler(void * pvparams){
 
@@ -497,7 +497,7 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 
 	CameraSoftReset();
 	CameraSensorInit();
-	StartSensorInJpegMode(640	, 480);
+	StartSensorInJpegMode(320	, 240);
 	vTaskDelay(pdMS_TO_TICKS(500));
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_VSYNC);
@@ -505,7 +505,7 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_ERR);
 //HAL_DCMI_StateTypeDef	retval = HAL_DCMI_GetState(&hdcmi);
 
-	HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t) jpeg_buffer, img_size);
+	HAL_DCMI_Start_DMA_multi(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t) jpeg_buffer,NULL,img_size, img_size);
 	vTaskDelay(pdMS_TO_TICKS(50));
 
 	DoCapture();
