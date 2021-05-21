@@ -124,6 +124,8 @@ void HAL_DCMI_MspInit(DCMI_HandleTypeDef* dcmiHandle)
     hdma_dcmi.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL;
     hdma_dcmi.Init.MemBurst = DMA_MBURST_SINGLE;
     hdma_dcmi.Init.PeriphBurst = DMA_PBURST_SINGLE;
+
+    hdma_dcmi.Instance->CR |= DMA_SxCR_DBM; //Set double buffer mode?
     if (HAL_DMA_Init(&hdma_dcmi) != HAL_OK)
     {
       Error_Handler();

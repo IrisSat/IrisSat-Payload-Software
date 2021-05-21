@@ -61,7 +61,7 @@
 #define CAM_I2C_READ_ADDR       0x91
 #define CAM_I2C_VAR_ADDR        0xC6
 #define CAM_I2C_VAR_DATA 		0xC8
-#define ENABLE_JPEG
+//#define ENABLE_JPEG
 
 
 uint8_t jpegHeader[JPEG_HEADER_SIZE] =
@@ -148,7 +148,7 @@ typedef struct MT9D111RegLst {
 	unsigned short usValue;
 } s_RegList;
 
-#ifndef ENABLE_JPEG
+//#ifndef ENABLE_JPEG
 static const s_RegList preview_on_cmd_list[]= {
     {1, 0xC6, 0xA103    },  // SEQ_CMD
     {1, 0xC8, 0x0001    },  // SEQ_CMD, Do Preview
@@ -229,7 +229,52 @@ static  const s_RegList preview_cmds_list[]= {
     {1, 0xC6, 0xA103    },  // SEQ_CMD
     {1, 0xC8, 0x0005    }   // SEQ_CMD, refresh
 };
-#else
+
+
+static const s_RegList capture_raw_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disable PLL
+		{ 0, 0x65, 0xE000 },  // Power DOWN PLL
+		{ 100, 0x00, 0x01F4 },  // Delay =500ms
+		{ 0, 0x66, 0x500B }, { 0, 0x67, 0x0500 }, { 0, 0x65, 0xA000 }, // Disable PLL
+		{ 0, 0x65, 0x2000 },  // Enable PLL
+		{ 0, 0x20, 0x0000 },  // READ_MODE_B (Image flip settings)
+		{ 100, 0x00, 0x01F4 },  // Delay =500ms
+		{ 100, 0x00, 0x01F4 },  // Delay =500ms
+		{ 100, 0x00, 0x01F4 },  // Delay =500ms
+		{ 1, 0xC6, 0xA102 },  // SEQ_MODE
+		{ 1, 0xC8, 0x0001 },  // SEQ_MODE
+		{ 1, 0xC6, 0xA102 },  // SEQ_MODE
+		{ 1, 0xC8, 0x0005 },  // SEQ_MODE
+		{ 1, 0xC6, 0xA120 },  // Enable Capture video <<----now set to capture, not video)
+		{ 1, 0xC8, 0x0001 },//001 for snapshot /////<<=======================================================originally 0x0002
+		{ 1, 0xC6, 0x270B },  // Mode config, enable JPEG bypass
+		{ 1, 0xC8, 0x0018 },	//bit 4 and 5 are jpeg bypass for context a/b.
+		{ 1, 0xC6, 0x2702 }, // FIFO_config0b, no spoof, adaptive clock
+		{ 1, 0xC8, 0x001E },
+		{ 1, 0xC6,0x277E}, //Output format config context B
+		{ 1, 0xC8, 0x0020}, //Set output RGB, and RGB 565 format.
+//		{ 1, 0xC6, 0xA907 },  // JPEG mode config, video <<---Now single frame)
+//		{ 1, 0xC8, 0x0034 }, /////<<-------------------------------------------------------originally 0x0035
+//		{ 1, 0xC6, 0xA906 },  // Format YCbCr422
+//		{ 1, 0xC8, 0x0000 },
+//		{ 1, 0xC6, 0xA90A },  // Set the qscale1
+//		{ 1, 0xC8, 0x0089 },
+//		{ 1, 0xC6, 0x2908 },  // Set the restartInt
+//		{ 1, 0xC8, 0x0020 },
+		};
+
+static s_RegList start_raw_capture_cmd_list[] = {
+		//{ 1, 0xC6, 0xA103 }, // SEQ_CMD, Do capture
+		//{ 2, 0x0D, 0x001F },
+		{ 1, 0xC6, 0xA103 }, // SEQ_CMD, Do capture
+		{ 1, 0xC8, 0x0002 },
+//		{ 2, 0x02,0x0001},
+//		{ 100, 0x00, 0x05F4 },  // Delay
+//
+//
+//		{ 100, 0x00, 0x01F4 },  // Delay =500ms
+		};
+
+//#else
 static const s_RegList capture_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disable PLL
 		{ 0, 0x65, 0xE000 },  // Power DOWN PLL
 		{ 100, 0x00, 0x01F4 },  // Delay =500ms
@@ -318,7 +363,8 @@ static s_RegList check_jpeg_height_cmd_list[] = {
 #define INDEX_CROP_Y1           7
 #define INDEX_SIZE_WIDTH        12//9
 #define INDEX_SIZE_HEIGHT       14//11
-static s_RegList resolution_cmds_list[] = { { 100, 0x00, 0x01F4 }, // Delay =500ms
+static s_RegList resolution_cmds_list[] = {
+		{ 100, 0x00, 0x01F4 }, // Delay =500ms
 		{ 1, 0xC6, 0x2735 }, //MODE_CROP_X0_A   <<Actually B
 		{ 1, 0xC8, 0x0000 }, //MODE_CROP_X0_A   <<Actually B
 		{ 1, 0xC6, 0x2737 }, //MODE_CROP_X1_A   <<Actually B
@@ -335,7 +381,7 @@ static s_RegList resolution_cmds_list[] = { { 100, 0x00, 0x01F4 }, // Delay =500
 		{ 1, 0xC6, 0x2709 }, //MODE_OUTPUT_HEIGHT_B <<correct
 		{ 1, 0xC8, 1200 }, //MODE_OUTPUT_HEIGHT_B
 		};
-#endif
+//#endif
 
 static const s_RegList init_cmds_list[] = { { 100, 0x00, 0x01F4 }, { 0, 0x33,
 		0x0343 }, // RESERVED_CORE_33
@@ -409,7 +455,8 @@ static const s_RegList init_cmds_list[] = { { 100, 0x00, 0x01F4 }, { 0, 0x33,
 		{ 1, 0xC6, 0xA103 }, // SEQ_CMD
 		{ 1, 0xC8, 0x0005 }, // SEQ_CMD
 		{ 1, 0xC6, 0xA104 }, // SEQ_CMD
-		{ 111, 0xC8, 0x0003 }, { 1, 0x08, 0x01FC }, // COLOR_PIPELINE_CONTROL
+		{ 111, 0xC8, 0x0003 },
+		{ 1, 0x08, 0x01FC }, // COLOR_PIPELINE_CONTROL
 		{ 1, 0x08, 0x01EC }, // COLOR_PIPELINE_CONTROL
 		{ 1, 0x08, 0x01FC }, // COLOR_PIPELINE_CONTROL
 		{ 1, 0x36, 0x0F08 }, // APERTURE_PARAMETERS
@@ -433,25 +480,25 @@ static const s_RegList Ryans_resetCam_cmds_list[] = { { 0, 0x65, 0xA000 }, ///SO
 static const s_RegList Ryans_Massive_cmds_list[] = {
 
 { 0, 0x0D, 0x0000 }, ///SOFT RESET DISABLED
-		{ 1, 0xC6, 0xA103 },  // SEQ_CMD, Do capture
+		{ 1, 0xC6, 0xA103 },  // SEQ_CMD, Do standby
 		{ 1, 0xC8, 0x0003 },
 
 //	{1, 0xC6, 0xA120   	},
 //	{1, 0xC8, 0x0001 	},
 		{ 1, 0xC6, 0xA735 }, //MODE_CROP_X0_A   <<Actually B
-		{ 1, 0xC8, 0x0100 }, //MODE_CROP_X0_A   <<Actually B
+		{ 1, 0xC8, 0x0000 }, //MODE_CROP_X0_A   <<Actually B
 		{ 1, 0xC6, 0xA737 }, //MODE_CROP_X1_A   <<Actually B
-		{ 1, 0xC8, 1600 }, //MODE_CROP_X1_A   <<Actually B
+		{ 1, 0xC8, 320 }, //MODE_CROP_X1_A   <<Actually B
 		{ 1, 0xC6, 0xA739 }, //MODE_CROP_Y0_A   <<Actually B
 		{ 1, 0xC8, 0x0000 }, //MODE_CROP_Y0_A   <<Actually B
 		{ 1, 0xC6, 0xA73B }, //MODE_CROP_Y1_A   <<Actually B
-		{ 1, 0xC8, 1200 }, //MODE_CROP_Y1_A   <<Actually B
+		{ 1, 0xC8, 240 }, //MODE_CROP_Y1_A   <<Actually B
 		{ 1, 0xC6, 0xA702 }, //MODE_CROP_Y1_A   <<Actually B
 		{ 1, 0xC8, 0x0001 }, //MODE_CROP_Y1_A   <<Actually B
 		{ 1, 0xC6, 0x2133 }, //Set_Num_Frames
 		{ 1, 0xC8, 0x0001 }, //to 1
-		{ 1, 0xC6, 0x2103 }, //Set_Num_Frames
-		{ 1, 0xC8, 0x0002 }, //to 1
+//		{ 1, 0xC6, 0x2103 }, //Set_Num_Frames
+//		{ 1, 0xC8, 0x0002 }, //to 1
 //	{0, 0x0D, 0x0021    },
 //	{100, 0x00, 0x2710  }, //delay 10 seconds
 //	{0, 0x0D, 0x0000    },
@@ -626,9 +673,10 @@ long CameraSoftReset() {
 //
 //*****************************************************************************
 long StartSensorInJpegMode(int width, int height) {
-#ifdef ENABLE_JPEG
+
 	long lRetVal = -1;
 
+#ifdef ENABLE_JPEG
 	lRetVal = RegLstWrite((s_RegList*) capture_cmds_list,
 			sizeof(capture_cmds_list) / sizeof(s_RegList));
 	//ASSERT_ON_ERROR(lRetVal);
@@ -642,7 +690,23 @@ long StartSensorInJpegMode(int width, int height) {
 	//lRetVal = RegLstWrite((s_RegList*) start_jpeg_capture_cmd_list,
 	//		sizeof(start_jpeg_capture_cmd_list) / sizeof(s_RegList));
 	//ASSERT_ON_ERROR(lRetVal);
+
+#else
+
+	lRetVal = RegLstWrite((s_RegList*) capture_raw_cmds_list,
+			sizeof(capture_raw_cmds_list) / sizeof(s_RegList));
+
+	//Set the crop and  image size?
+	resolution_cmds_list[INDEX_SIZE_WIDTH].usValue = width;
+	resolution_cmds_list[INDEX_SIZE_HEIGHT].usValue = height;
+
+	lRetVal = RegLstWrite((s_RegList*) resolution_cmds_list,
+			sizeof(resolution_cmds_list) / sizeof(s_RegList));
+
+
 #endif
+
+
 	return 0;
 }
 
@@ -688,8 +752,14 @@ void doHandshake(){
 			sizeof(handshake_cmd) / sizeof(s_RegList));
 }
 void DoCapture() {
+#ifdef ENABLE_JPEG
 	long lRetVal = RegLstWrite((s_RegList*) start_jpeg_capture_cmd_list,
 			sizeof(start_jpeg_capture_cmd_list) / sizeof(s_RegList));
+
+#else
+	long lRetVal = RegLstWrite((s_RegList*) start_raw_capture_cmd_list,
+			sizeof(start_raw_capture_cmd_list) / sizeof(s_RegList));
+#endif
 
 }
 

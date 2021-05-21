@@ -20,6 +20,7 @@
 #include "dma.h"
 #include "dcmi.h"
 #include "cmsis_os.h"
+#include "dcmi_custom.h"
 
 void imageTransfer(void * pvParams);
 void handleCommand(telemetryPacket_t* command,csp_conn_t * connection);
@@ -27,6 +28,8 @@ void rx_image(uint8_t * chunk,uint16_t size,uint16_t num);
 void takeImage(uint8_t camNum,Calendar_t * time);
 void powerCamera(uint8_t camNum, uint8_t onOrOff);
 void resetCamera(uint8_t camNum);
+
+void swapBits(uint32_t* buff,uint32_t numBytes);
 
 QueueHandle_t imageSendQueue;
 volatile uint8_t imageCaptureFlag =0;
@@ -514,18 +517,29 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 
 	//Wait for the image to be transfered from the camera to the processor.
 	while(1){
+
+
+		//There is a buffer with data that we need to save before it gets overwritten...
+		if(bufferSwitched() == 1){
+
+			///Write to file...
+			swapBits(getFreeBuff(), imageSize/2/4);
+			int res = yaffs_write(file, getFreeBuff(), imageSize/2);
+
+		}
 		if (imageCaptureFlag == 1){
 			break;
 		}
+
 		vTaskDelay(pdMS_TO_TICKS(50));
 	}
 
-
+	int res = yaffs_close(file);
 	//Now read in the size of the image...
 
-	uint32_t actualImageSize = CheckJpegSize();//Get actual value...
-	uint32_t width = checkResolutionWidth();
-	uint32_t height= checkResolutionHeight();
+//	uint32_t actualImageSize = CheckJpegSize();//Get actual value...
+//	uint32_t width = checkResolutionWidth();
+//	uint32_t height= checkResolutionHeight();
 
 	//Next we should copy the image from RAM into a file in the file system. The file was opened at the start of this function...
 	//This is also where we flip some of the data bits to solve the hardware problem with MUX.
@@ -534,55 +548,31 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	uint32_t numberOfLines = linecount;
 	//Flip the bits. Data 0 and 1 are flipped as well as data 4 and 5.
 	//There is a test program in Tests/ that can be run on a PC, showing the logic is correct.
-	for(int i=0; i<actualImageSize/4;i++){
 
-        uint32_t temp = jpeg_buffer[i];
-        uint8_t LeftByte = (temp>>24) & 0xFF; //The left most byte. XX_YY_ZZ_AA >> 24 == 00_00_00_XX.
-        uint8_t MidLeftByte = (temp>>16) & 0xFF; //The second left most byte. XX_YY_ZZ_AA >> 16 -> 00_00_XX_YY then & 0xFF -> 00_00_00__YY
-        uint8_t MidRightByte = (temp>>8) & 0xFF; //Middle right byte
-        uint8_t RightByte = (temp & 0xFF); // The right most byte.
 
-        //Essentially shift the data to the left once, this moves bits 5 and 1, then mask their new position.
-        //Then shift right 1 to get bit 0 and 4 into the right place, again mask out the new position.
-        //Then combine everything by ORing, but also include the original data, masked out for the spots that were changed.
+//	uint32_t restartCoutn =0;
+//	uint8_t* jpeg_buffer_byte = (uint8_t*) jpeg_buffer;
+//
+//	for(int i=0; i< (img_size-1);i++){
+//
+//		uint8_t temp1 = jpeg_buffer_byte[i];
+//		uint8_t temp2 = jpeg_buffer_byte[i+1];
+//		if(temp1 == 0xFF && (temp2>= 0xD0 && temp2<= 0xD7)){
+//			restartCoutn ++;
+//		}
+//	}
 
-        uint8_t new_LB = ((LeftByte>>1)&0x11)  | ((LeftByte<<1)& 0x22) | (LeftByte & 0xCC);
-
-        uint8_t new_MLB = ((MidLeftByte>>1)&0x11)  | ((MidLeftByte<<1)& 0x22) | (MidLeftByte & 0xCC);
-
-        uint8_t new_MRB = ((MidRightByte>>1)&0x11)  | ((MidRightByte<<1)& 0x22) | (MidRightByte & 0xCC);
-
-        uint8_t new_RB = ((RightByte>>1)&0x11)  | ((RightByte<<1)& 0x22) | (RightByte & 0xCC);
-
-        //Reassemble into uint32_t values.
-        uint32_t newByte = (new_LB << 24) + (new_MLB << 16) + (new_MRB <<8) + new_RB;
-
-        jpeg_buffer[i] = newByte;
-	}
-
-	uint32_t restartCoutn =0;
-	uint8_t* jpeg_buffer_byte = (uint8_t*) jpeg_buffer;
-
-	for(int i=0; i< (img_size-1);i++){
-
-		uint8_t temp1 = jpeg_buffer_byte[i];
-		uint8_t temp2 = jpeg_buffer_byte[i+1];
-		if(temp1 == 0xFF && (temp2>= 0xD0 && temp2<= 0xD7)){
-			restartCoutn ++;
-		}
-	}
-
-	//If jpeg header is in an array of size jpegHeaderSize:
-	int res = yaffs_write(file, jpegHeader, JPEG_HEADER_SIZE);
-
-	//Can we write in one go? let's try...
-	res = yaffs_write(file,jpeg_buffer,actualImageSize);
-
-	//add the 2 byte jpeg footer.
-	res = yaffs_write(file,jpegFooter, JPEG_FOOTER_SIZE);
+//	//If jpeg header is in an array of size jpegHeaderSize:
+//	int res = yaffs_write(file, jpegHeader, JPEG_HEADER_SIZE);
+//
+//	//Can we write in one go? let's try...
+//	res = yaffs_write(file,jpeg_buffer,actualImageSize);
+//
+//	//add the 2 byte jpeg footer.
+//	res = yaffs_write(file,jpegFooter, JPEG_FOOTER_SIZE);
 
 	//Very important, close the file.
-	res = yaffs_close(file);
+
 
 
 	//Once the image is taken, we should send a message to CDH to let it know it can request the image transfer.
@@ -652,6 +642,8 @@ void powerCamera(uint8_t camNum, uint8_t onOrOff){
 
 
 }
+
+
 void resetCamera(uint8_t camNum){
 
 	//Do a hardware reset.
@@ -662,6 +654,36 @@ void resetCamera(uint8_t camNum){
 	else if (camNum == 2){
 		//Reset Camera 2.
 		//HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
+	}
+
+}
+
+void swapBits(uint32_t* buff,uint32_t numBytes){
+
+	for(int i=0; i<numBytes;i++){
+
+        uint32_t temp = buff[i];
+        uint8_t LeftByte = (temp>>24) & 0xFF; //The left most byte. XX_YY_ZZ_AA >> 24 == 00_00_00_XX.
+        uint8_t MidLeftByte = (temp>>16) & 0xFF; //The second left most byte. XX_YY_ZZ_AA >> 16 -> 00_00_XX_YY then & 0xFF -> 00_00_00__YY
+        uint8_t MidRightByte = (temp>>8) & 0xFF; //Middle right byte
+        uint8_t RightByte = (temp & 0xFF); // The right most byte.
+
+        //Essentially shift the data to the left once, this moves bits 5 and 1, then mask their new position.
+        //Then shift right 1 to get bit 0 and 4 into the right place, again mask out the new position.
+        //Then combine everything by ORing, but also include the original data, masked out for the spots that were changed.
+
+        uint8_t new_LB = ((LeftByte>>1)&0x11)  | ((LeftByte<<1)& 0x22) | (LeftByte & 0xCC);
+
+        uint8_t new_MLB = ((MidLeftByte>>1)&0x11)  | ((MidLeftByte<<1)& 0x22) | (MidLeftByte & 0xCC);
+
+        uint8_t new_MRB = ((MidRightByte>>1)&0x11)  | ((MidRightByte<<1)& 0x22) | (MidRightByte & 0xCC);
+
+        uint8_t new_RB = ((RightByte>>1)&0x11)  | ((RightByte<<1)& 0x22) | (RightByte & 0xCC);
+
+        //Reassemble into uint32_t values.
+        uint32_t newByte = (new_LB << 24) + (new_MLB << 16) + (new_MRB <<8) + new_RB;
+
+       buff[i] = newByte;
 	}
 
 }
