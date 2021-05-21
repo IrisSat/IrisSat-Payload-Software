@@ -14,6 +14,7 @@ static void DCMI_DMAError_custom(DMA_HandleTypeDef *hdma);
 
 volatile uint8_t bufferSwitch = 0;
 volatile uint32_t* unusedBuff =0;
+volatile uint8_t dcmi_custom_error = 0;
 
 HAL_StatusTypeDef HAL_DCMI_Start_DMA_multi(DCMI_HandleTypeDef *hdcmi, uint32_t DCMI_Mode, uint32_t buffer0, uint32_t buffer1, uint32_t bufferSize, uint32_t imageSize)
 {
@@ -131,8 +132,14 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
   uint32_t tmp = 0;
 
   DCMI_HandleTypeDef *hdcmi = (DCMI_HandleTypeDef *)((DMA_HandleTypeDef *)hdma)->Parent;
+  if(bufferSwitch == 1){
+	  //This means the user has not finished using the buffer  but we have already switched to it :(
+	  //Call error to let user know that their data is potentially bad.
+	  hdcmi->ErrorCallback(hdcmi);
+	  dcmi_custom_error = 42;
 
-  //We shouldn't need to update any mem addresses.
+  }
+  //We shouldn't need to update any mem addresses. Since i think it hsould do this automatically.
 //  //We still have transfers to go.
 //  if (hdcmi->XferCount != 0)
 //  {
@@ -194,4 +201,11 @@ uint8_t bufferSwitched(){
 }
 uint32_t* getFreeBuff(){
 	return unusedBuff;
+}
+void doneBufferHandling(){
+	bufferSwitch = 0;
+}
+
+uint8_t getDcmiCustomError(){
+	return dcmi_custom_error;
 }

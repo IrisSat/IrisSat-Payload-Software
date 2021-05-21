@@ -525,7 +525,7 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 			///Write to file...
 			swapBits(getFreeBuff(), imageSize/2/4);
 			int res = yaffs_write(file, getFreeBuff(), imageSize/2);
-
+			doneBufferHandling(); //Tell cdmi that were done with the buffer. If the dma has already switched back to this buffer, then we should get an error.
 		}
 		if (imageCaptureFlag == 1){
 			break;
@@ -726,4 +726,10 @@ void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
 	//Set the flag so the main loop knows we have a complete image.
 	linecount++;
 
+}
+
+void       HAL_DCMI_ErrorCallback(DCMI_HandleTypeDef *hdcmi){
+
+	uint8_t custom_error = getDcmiCustomError(); //Check if it was error from our code... 0  = no error, 42 = buffer overwrite error .
+	uint8_t a = 1;
 }
