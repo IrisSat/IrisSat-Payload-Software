@@ -236,8 +236,8 @@ static  const s_RegList preview_cmds_list[]= {
 static const s_RegList capture_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disable PLL
 		{ 0, 0x65, 0xE000 },  // Power DOWN PLL
 		{ 100, 0x00, 0x01F4 },  // Delay =500ms
-		{ 0, 0x66, 0x5003 }, // M=80 N =3 (before =11) -> 50MHz
-		{ 0, 0x67, 0x050C }, // P = 0
+		{ 0, 0x66, 0x1402 }, // M=80 N =3 (before =11) -> 50MHz
+		{ 0, 0x67, 0x0500 }, // P = 0
 		{ 0, 0x65, 0xA000 }, // Disable PLL
 		{ 0, 0x65, 0x2000 },  // Enable PLL
 		{ 0, 0x20, 0x0000 },  // READ_MODE_B (Image flip settings)
@@ -254,8 +254,16 @@ static const s_RegList capture_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disable P
 		{ 1, 0xC8, 0x0000 },
 		{ 1, 0xC6, 0x2702 }, // FIFO_config0b, no spoof, adaptive clock
 		{ 1, 0xC8, 0x001E },
-		{ 1, 0xC6, 0x2772 }, // FIFO_config0b, no spoof, adaptive clock
+
+
+
+		//{ 1, 0xC6, 0x2772 }, // Fifo_config0_b
+		//{ 1, 0xC8, 0x005F },
+		{ 1, 0xC6, 0xE0E1 }, // Fifo_config0_b
 		{ 1, 0xC8, 0x005F },
+		{ 1, 0xC6, 0x00E1 }, // Fifo_config0_b
+		{ 1, 0xC8, 0x005F },
+
 		{1,0xC6, 0x2779},
 		{1,0xC8,1104}, //Spoof width
 		{1,0xC6,0x277B},
@@ -273,7 +281,7 @@ static const s_RegList capture_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disable P
  		{ 1, 0xC6, 0x2908 },  // Set the restartInt
 		{ 1, 0xC8, 0x0020 },
 
-		{1,0x48,0x0003}, //test pattern enable (vertical bars)
+		//{1,0x48,0x0003}, //test pattern enable (vertical bars)
 
 };
 
