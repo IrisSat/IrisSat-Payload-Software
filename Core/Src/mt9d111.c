@@ -265,13 +265,16 @@ static const s_RegList capture_cmds_list[] = { { 0, 0x65, 0xA000 }, // Disable P
 		{ 1, 0xC8, 0x0056 },  // Format YCbCr422
 		{ 1, 0xC8, 0x0000 },
 		{ 1, 0xC6, 0xA90A },  // Set the qscale1
-		{ 1, 0xC8, 0x0089 },
+		{ 1, 0xC8, 0x0030 },
 		{ 1, 0xC6, 0xA90B },  // Set the qscale2
 		{ 1, 0xC8, 0x00FF },
-		{ 1, 0xC6, 0x2908 },  // Set the restartInt
+		//{ 1, 0xC6, 0xA90C },  // Set the qscale3
+		//{ 1, 0xC8, 0x00FF }, //NEXT BETWEEN 19 and 1B
+ 		{ 1, 0xC6, 0x2908 },  // Set the restartInt
 		{ 1, 0xC8, 0x0020 },
 
-		{1,0x48,0x0303},
+		{1,0x48,0x0003}, //test pattern enable (vertical bars)
+
 };
 
 static s_RegList start_jpeg_capture_cmd_list[] = {

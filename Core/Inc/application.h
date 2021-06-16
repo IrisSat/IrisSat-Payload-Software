@@ -8,7 +8,7 @@
 #ifndef INC_APPLICATION_H_
 #define INC_APPLICATION_H_
 
-#define CHUNKSIZE	150
+#define CHUNKSIZE	100 //100 works with color bars, 133 is max with camera not capped
 
 void commandHandler(void * pvparams);
 
