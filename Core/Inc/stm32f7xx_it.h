@@ -58,6 +58,8 @@ void CAN2_TX_IRQHandler(void);
 void CAN2_RX0_IRQHandler(void);
 void CAN2_RX1_IRQHandler(void);
 void CAN2_SCE_IRQHandler(void);
+void DMA2_Stream7_IRQHandler(void);
+void DCMI_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */
