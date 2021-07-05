@@ -9,7 +9,7 @@
 #include "yaffsfs.h"
 #include "telemetry.h"
 
-static int imageFileNumber =0;
+static uint16_t imageFileNumber = 0;
 
 int yaffsfs_GetError(){
 
@@ -149,7 +149,8 @@ int allocateImageFile(uint8_t * img_num){
 	//Check how much free space we have left.
 	long remainingSpace = yaffs_freespace(FILESYSTEM_ROOT);
 
-	if(remainingSpace<IMAGE_SIZE || imageFileNumber>99){
+
+	if(remainingSpace<IMAGE_SIZE || imageFileNumber>3099){
 
 		imageFileNumber = 0; //Reset the file number, since we don't have space for new image. Overwirte the oldest image.
 	}

@@ -2,7 +2,7 @@
  * application.c
  *
  *  Created on: Mar. 17, 2021
- *      Author: Joseph Howarth
+ *      Author: Joseph Howarth and Ryan Dion
  */
 
 #include "application.h"
@@ -19,7 +19,9 @@
 #include "mt9d111.h"
 #include "dma.h"
 #include "dcmi.h"
+#include "gpio.h"
 #include "cmsis_os.h"
+#include "stm32f7xx_hal_gpio.h"
 
 void imageTransfer(void * pvParams);
 void handleCommand(telemetryPacket_t* command,csp_conn_t * connection);
@@ -364,7 +366,7 @@ void imageTransfer(void * pvParams){
 
 	QueueHandle_t requestQ = (QueueHandle_t) pvParams;
 	Calendar_t time = {0};
-
+//*******************************************************************************files not keeping numbers after reboot
 	while(1){
 
 		//Wait until we get a request to transfer image.
@@ -374,11 +376,14 @@ void imageTransfer(void * pvParams){
 		snprintf(name,15,"flash/%02d.jpg",fileNum);
 
 		file = yaffs_open(name,O_RDONLY,0);
-
+		int err = yaffsfs_GetError(); //=================================ditto
+		int access = yaffs_access(name, 0); //===========================ditto
 		size = 0;
 		numChunks =0;
-
-
+		//size = 196544; //===============================================ditto
+		//uint8_t *fileNum = 0x2005e447; //==============================="
+		//yaffs_fsync(file);//==========================================ditto
+		//file = 0; //=================================================added by Ryan
 		if(file<0){
 			//send negative response.
 
@@ -395,6 +400,8 @@ void imageTransfer(void * pvParams){
 		else{
 
 			size = yaffs_lseek(file,0,SEEK_END);
+
+
 			yaffs_lseek(file,0,SEEK_SET);
 			numChunks = (size%CHUNKSIZE==0) ? size/CHUNKSIZE: size/CHUNKSIZE+1;
 			//Send info packet.
@@ -470,54 +477,69 @@ void rx_image(uint8_t * chunk,uint16_t size,uint16_t num){
 
 
 void takeImage(uint8_t camNum,Calendar_t * time){
+	static int initialized = 0;
+	static int desiredLoopNum = 1;
+	int numBulkImagesTaken = 0;
+	while(numBulkImagesTaken<desiredLoopNum){
+	numBulkImagesTaken++;
+	if (numBulkImagesTaken > 94){
+		int testaaa = 0;
+	}
+	camNum = 2;
+	powerCamera(camNum,1);
+	HAL_Delay(100);
+	if (initialized == 0){
+	resetCamera(camNum);
+	HAL_Delay(100);
+	}
 
-//	powerCamera(2, 0);
-//
-//	HAL_Delay(1000);
-//	powerCamera(2,1);
-//
-//	resetCamera(2);
-
-	uint8_t imageNum;
+	uint16_t imageNum;
 	//Find which file we want to save to....
 	int file = allocateImageFile(&imageNum);
 
 	//Start image capture.
-	int imageSize =0;
+	int imageSize = 0;
 
-	//Setup the correct camera
+	//Setup the correct camera (Setting bits enables CAM 1)
 	if(camNum == 1){
 		//Change the MUX pins so that CAM 1 is used.
-
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,1);
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_14,1);
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_15,1);
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_15,1);
 	}
 	else if(camNum == 2){
-		//Change the MUX pins so that CAM 1 is used.
-
+		//Change the MUX pins so that CAM 2 is used.
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,0);
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_14,0);
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_15,0);
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_15,0);
 	}
 
 	//Capture the image.
 
 	imageCaptureFlag = 0;//Make sure this is zero, since the vsync interrupt will set to 1 when the image is received.
 
-	CameraSoftReset();
-	CameraSensorInit();
-	StartSensorInJpegMode(640	, 480);
-	vTaskDelay(pdMS_TO_TICKS(500));
+	//CameraSoftReset(); //Soft reset to camera not needed currently
+	if (initialized == 0){
+	CameraSensorInit(camNum);
+	StartSensorInJpegMode(1280,960, camNum); //When changed to 1600,1200 or 800x600 getting errors currently
+	}
+	initialized = initialized + 1;
+
+	vTaskDelay(pdMS_TO_TICKS(1000));
+	//enable interrupts
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_VSYNC);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_LINE);
 	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_ERR);
-//HAL_DCMI_StateTypeDef	retval = HAL_DCMI_GetState(&hdcmi);
 
+	//Start DMA
 	HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t) jpeg_buffer, img_size);
-	vTaskDelay(pdMS_TO_TICKS(50));
+	vTaskDelay(pdMS_TO_TICKS(100));
+	//Take an image
+	DoCapture(camNum);
 
-	DoCapture();
-//	retval = HAL_DCMI_GetState(&hdcmi);
-
-//	osDelay(50);
-//uint32_t errval = HAL_DCMI_GetError(&hdcmi);
-//	osDelay(50);
 
 	//Wait for the image to be transfered from the camera to the processor.
 	while(1){
@@ -530,9 +552,9 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 
 	//Now read in the size of the image...
 
-	uint32_t actualImageSize = CheckJpegSize();//Get actual value...
-	uint32_t width = checkResolutionWidth();
-	uint32_t height= checkResolutionHeight();
+	uint32_t actualImageSize = CheckJpegSize(camNum);//Get actual value...
+	uint32_t width = checkResolutionWidth(camNum);
+	uint32_t height= checkResolutionHeight(camNum);
 
 	//Next we should copy the image from RAM into a file in the file system. The file was opened at the start of this function...
 	//This is also where we flip some of the data bits to solve the hardware problem with MUX.
@@ -540,7 +562,7 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 
 	uint32_t numberOfLines = linecount;
 
-	uint32_t status = checkJpegStatus();
+	uint32_t status = checkJpegStatus(camNum);
 
 	//Flip the bits. Data 0 and 1 are flipped as well as data 4 and 5.
 	//There is a test program in Tests/ that can be run on a PC, showing the logic is correct.
@@ -661,7 +683,8 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 		yaffs_write(fd, logMsg, strlen(logMsg));
 		yaffs_close(fd);
 	}
-
+	powerCamera(camNum,0);
+	}//====================================================================
 
 
 }
@@ -670,19 +693,19 @@ void powerCamera(uint8_t camNum, uint8_t onOrOff){
 
 	if(camNum == 1 && onOrOff == 0){
 		//Power off camera 1.
-		//HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_2,0);
 	}
 	else if(camNum == 1 && onOrOff == 1){
 		//Power on camera 1.
-		//HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_2,1);
 	}
 	else if(camNum == 2 && onOrOff == 0){
 		//Power off camera 2.
-		HAL_GPIO_WritePin(GPIOE, 2, 0);
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_3,0);
 	}
 	else if(camNum == 2 && onOrOff == 1){
 		//Power on camera 2.
-		HAL_GPIO_WritePin(GPIOE,2, 1);
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_3,1);
 	}
 
 
@@ -691,15 +714,18 @@ void resetCamera(uint8_t camNum){
 
 	//Do a hardware reset.
 	if(camNum == 1){
-		//Reset Camera 1.
-		//HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState);
+		//Reset Camera 1 (note delay needs to be at least 1 µs)
+		HAL_GPIO_WritePin(GPIOA, 3, 1);
+		HAL_Delay(100);
+		HAL_GPIO_WritePin(GPIOA, 3, 0);
+		HAL_Delay(100);
 	}
 	else if (camNum == 2){
-		//Reset Camera 1 (camera 1 pins) Needs to switch with CAM 2.
-		HAL_GPIO_WritePin(GPIOA, 3, 0);
-		HAL_Delay(1);
-		HAL_GPIO_WritePin(GPIOA, 3, 1);
-		HAL_Delay(1);
+		//Reset Camera 2 (note delay needs to be at least 1 µs)
+		HAL_GPIO_WritePin(GPIOA, 5, 1);
+		HAL_Delay(100);
+		HAL_GPIO_WritePin(GPIOA, 5, 0);
+		HAL_Delay(100);
 	}
 
 }
@@ -713,7 +739,7 @@ void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
 	imageCaptureFlag = 1;
 
 }
-void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
+void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi,uint8_t camNum)
 {
 	//Stop DCMI. Not sure if needed, but if not maybe this will still save power?
 	//HAL_DCMI_Stop(hdcmi);
@@ -727,9 +753,9 @@ void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
 			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_LINE);
 			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_ERR);
 
-			jpegstatus = checkJpegStatus();
-			doHandshake();
-			jpegstatus = checkJpegStatus();
+			jpegstatus = checkJpegStatus(camNum); ///==============================================commenting these may cause problems, may be unneeded
+			doHandshake(camNum);
+			jpegstatus = checkJpegStatus(camNum);
 
 
 

@@ -535,7 +535,7 @@ HAL_StatusTypeDef HAL_DCMI_Resume(DCMI_HandleTypeDef *hdcmi);
 void       HAL_DCMI_ErrorCallback(DCMI_HandleTypeDef *hdcmi);
 void       HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi);
 void       HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi);
-void       HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi);
+void       HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi,uint8_t camNum);
 void       HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi);
 /**
   * @}

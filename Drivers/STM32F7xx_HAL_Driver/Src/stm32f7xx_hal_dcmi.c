@@ -719,7 +719,7 @@ __weak void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
   *                the configuration information for DCMI.
   * @retval None
   */
-__weak void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi)
+__weak void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi,uint8_t camNum)
 {
   /* Prevent unused argument(s) compilation warning */
   UNUSED(hdcmi);

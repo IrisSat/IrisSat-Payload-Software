@@ -23,7 +23,7 @@ extern "C"
     \note
     \warning
 */
-long CameraSensorInit();
+long CameraSensorInit(uint8_t camNum);
 
 /*!
     \brief                      Configures sensor in JPEG mode
@@ -38,18 +38,18 @@ long CameraSensorInit();
 */
 
 
-long StartSensorInJpegMode(int width, int height);
-long CameraSensorResolution(int width, int height);
-long I2CSelectVar(unsigned char PageNumber, unsigned short VarInt);
-long I2CWriteVar(unsigned char PageNumber, unsigned short VarInt,unsigned short VarValue);
-long I2CReadVar(unsigned char PageNumber, unsigned short VarInt,unsigned short *VarValue);
-long CameraSoftReset();
-void DoCapture();
-uint32_t CheckJpegSize();
-uint32_t checkResolutionWidth();
-uint32_t checkResolutionHeight();
-uint16_t checkJpegStatus();
-void doHandshake();
+long StartSensorInJpegMode(int width, int height,uint8_t camNum);
+long CameraSensorResolution(int width, int height,uint8_t camNum);
+long I2CSelectVar(unsigned char PageNumber, unsigned short VarInt,uint8_t camNum);
+long I2CWriteVar(unsigned char PageNumber, unsigned short VarInt,unsigned short VarValue,uint8_t camNum);
+long I2CReadVar(unsigned char PageNumber, unsigned short VarInt,unsigned short *VarValue,uint8_t camNum);
+long CameraSoftReset(uint8_t camNum);
+void DoCapture(uint8_t camNum);
+uint32_t CheckJpegSize(uint8_t camNum);
+uint32_t checkResolutionWidth(uint8_t camNum);
+uint32_t checkResolutionHeight(uint8_t camNum);
+uint16_t checkJpegStatus(uint8_t camNum);
+void doHandshake(uint8_t camNum);
 
 
 #define JPEG_HEADER_SIZE	625

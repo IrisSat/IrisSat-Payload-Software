@@ -52,7 +52,7 @@ void MX_CAN2_Init(void)
   hcan2.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan2) != HAL_OK)
   {
-//    Error_Handler();
+    Error_Handler();
   }
   /* USER CODE BEGIN CAN2_Init 2 */
 
@@ -79,7 +79,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     PB13     ------> CAN2_TX
     PB5     ------> CAN2_RX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_12;
+    GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
