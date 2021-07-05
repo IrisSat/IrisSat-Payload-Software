@@ -9,7 +9,7 @@
 #include "yaffsfs.h"
 #include "telemetry.h"
 
-static int imageFileNumber =0;
+static uint16_t imageFileNumber = 0;
 
 int yaffsfs_GetError(){
 
@@ -50,7 +50,7 @@ void startupFilesystem(){
 	//Mount the file system.
 	int result = yaffs_mount(FILESYSTEM_ROOT);
 
-	if(result != 1){
+	if(result != 0){
 
 		telemetryPacket_t t;
 		Calendar_t now = {0}; //Set to zero, since payload does not keep track of time. CDH will timestamp on receipt.
@@ -95,7 +95,7 @@ void startupFilesystem(){
 	//This file will keep track of how many times the system has started up/reset.
 	int fd = yaffs_open(BOOTCOUNT_FILE_PATH,O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
 
-	if(fd>0){
+	if(fd>=0){
 
 		int runCount;
 		char runCountStr[4];
@@ -149,13 +149,14 @@ int allocateImageFile(uint8_t * img_num){
 	//Check how much free space we have left.
 	long remainingSpace = yaffs_freespace(FILESYSTEM_ROOT);
 
-	if(remainingSpace<IMAGE_SIZE || imageFileNumber>99){
+
+	if(remainingSpace<IMAGE_SIZE || imageFileNumber>3099){
 
 		imageFileNumber = 0; //Reset the file number, since we don't have space for new image. Overwirte the oldest image.
 	}
 
 	char filename[20];
-	snprintf(filename,15,"%s/%d.%s",FILESYSTEM_ROOT,imageFileNumber,IMAGE_FORMAT_TYPE);
+	snprintf(filename,15,"%s/%02d.%s",FILESYSTEM_ROOT,imageFileNumber,IMAGE_FORMAT_TYPE);
 
 	int fd = yaffs_open(filename,O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
 
@@ -188,6 +189,8 @@ int allocateImageFile(uint8_t * img_num){
 		t.data = (uint8_t*)errorMsg;
 
 		sendTelemetry(&t);
+
+		*img_num = imageFileNumber;
 
 		imageFileNumber ++;
 

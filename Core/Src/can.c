@@ -31,6 +31,13 @@ CAN_HandleTypeDef hcan2;
 void MX_CAN2_Init(void)
 {
 
+  /* USER CODE BEGIN CAN2_Init 0 */
+
+  /* USER CODE END CAN2_Init 0 */
+
+  /* USER CODE BEGIN CAN2_Init 1 */
+
+  /* USER CODE END CAN2_Init 1 */
   hcan2.Instance = CAN2;
   hcan2.Init.Prescaler = 12;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
@@ -47,6 +54,9 @@ void MX_CAN2_Init(void)
   {
     Error_Handler();
   }
+  /* USER CODE BEGIN CAN2_Init 2 */
+
+  /* USER CODE END CAN2_Init 2 */
 
 }
 
@@ -69,7 +79,7 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     PB13     ------> CAN2_TX
     PB5     ------> CAN2_RX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_13|GPIO_PIN_12;
+    GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;

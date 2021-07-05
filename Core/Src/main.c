@@ -22,6 +22,9 @@
 #include "cmsis_os.h"
 #include "adc.h"
 #include "can.h"
+#include "dcmi.h"
+#include "dma.h"
+#include "i2c.h"
 #include "gpio.h"
 #include "fmc.h"
 
@@ -96,8 +99,8 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
 
+  HAL_Init();
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -111,13 +114,17 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
-//  MX_CAN2_Init();
+  MX_CAN2_Init();
   MX_FMC_Init();
+  MX_DCMI_Init();
+  MX_I2C2_Init();
+  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
   HAL_CAN_MspInit(&hcan2);
   MX_CAN2_Init();
-//  startCAN();
+
 
   BaseType_t status;
 #ifdef SERVER
@@ -141,15 +148,7 @@ int main(void)
 
 #endif
 
-
-
-    //Test the external Flash memory:
-
-//    uint32_t* a_ptr = 0x80000000;
-//    *a_ptr = 10;
-//    uint32_t b = *a_ptr;
-
-
+    //This task does most of the stuff.
     xTaskCreate(commandHandler,
                              "cmdHandler",
                              1000,
@@ -157,35 +156,19 @@ int main(void)
                              3,
                              NULL);
 
+//	Test for the memory. Not needed for the production code...
 //    BaseType_t state = xTaskCreate(vTestMemory,"test mem", 10000,NULL,1,NULL);
 
-
+    //Initialize the filesystem to work with freertos...
     yaffsfs_OSInitialisation();
+
+    //Link the external flash with the filesystem.
     struct yaffs_dev* fileSystemDevice;
     fs_nand_install_drv(fileSystemDevice);
-//    uint8_t check[64] = {0};
-//    uint8_t pages[2048] = {0};
-//    uint8_t pages2[2048];
-//    for(int i=0;i<2048;i++){
-//    	pages2[i] = i%255;
-//    }
-//    writeFlash(pages2, 0, 1);
-//    readFlash(pages,0,1);
-//    readSpare(check, 0);
-//////
-////    eraseFlashPages(0, 1);
-////    memset(pages,0,2048);
-//    memset(check,0,64);
-////    HAL_Delay(20);
-////    readSpare(check, 0);
-//    readFlash(pages, 0, 1);
-//    eraseFlashDevice();
-////    memset(check,0,64);
-//    readSpare(check,0);
-    size_t freeSpace= xPortGetFreeHeapSize();
-//    while(1){};
 
-    /* USER CODE END 2 */
+    size_t freeSpace= xPortGetFreeHeapSize();
+
+  /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
@@ -215,6 +198,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
   */
@@ -251,6 +235,13 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2C2|RCC_PERIPHCLK_I2C3;
+  PeriphClkInitStruct.I2c2ClockSelection = RCC_I2C2CLKSOURCE_PCLK1;
+  PeriphClkInitStruct.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
   {
     Error_Handler();
   }

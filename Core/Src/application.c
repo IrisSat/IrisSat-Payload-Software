@@ -2,7 +2,7 @@
  * application.c
  *
  *  Created on: Mar. 17, 2021
- *      Author: Joseph Howarth
+ *      Author: Joseph Howarth and Ryan Dion
  */
 
 #include "application.h"
@@ -16,16 +16,27 @@
 #include <math.h>
 #include "yaffsfs.h"
 #include "filesystemUtilites.h"
-
+#include "mt9d111.h"
+#include "dma.h"
+#include "dcmi.h"
+#include "gpio.h"
+#include "cmsis_os.h"
+#include "stm32f7xx_hal_gpio.h"
 
 void imageTransfer(void * pvParams);
 void handleCommand(telemetryPacket_t* command,csp_conn_t * connection);
 void rx_image(uint8_t * chunk,uint16_t size,uint16_t num);
 void takeImage(uint8_t camNum,Calendar_t * time);
-
+void powerCamera(uint8_t camNum, uint8_t onOrOff);
+void resetCamera(uint8_t camNum);
 
 QueueHandle_t imageSendQueue;
+volatile uint8_t imageCaptureFlag =0;
+volatile uint32_t linecount = 0;
+volatile uint16_t jpegstatus=0xFF;
 
+static uint32_t img_size = 70000;
+uint32_t jpeg_buffer[70000] = {0};
 
 void commandHandler(void * pvparams){
 
@@ -266,12 +277,39 @@ void handleCommand(telemetryPacket_t* command,csp_conn_t * connection){
 			break;
 		}
 
-		case PAYLOAD_SAMPLE_LOC_CMD:{
+		case PAYLOAD_CAM1_OFF_CMD:{
+
+			powerCamera(1, 0);
 
 			break;
 		}
+		case PAYLOAD_CAM2_OFF_CMD:{
 
-		case PAYLOAD_CAMERA_TIME_CMD:{
+			powerCamera(2, 0);
+
+			break;
+		}
+		case PAYLOAD_CAM1_ON_CMD:{
+
+			powerCamera(1, 1);
+
+			break;
+		}
+		case PAYLOAD_CAM2_ON_CMD:{
+
+			powerCamera(2, 1);
+
+			break;
+		}
+		case PAYLOAD_CAM1_RESET_CMD:{
+
+			resetCamera(1);
+
+			break;
+		}
+		case PAYLOAD_CAM2_RESET_CMD:{
+
+			resetCamera(2);
 
 			break;
 		}
@@ -322,13 +360,13 @@ void imageTransfer(void * pvParams){
 	int file;
 	uint32_t size = 0;
 	uint32_t numChunks =0;
-	uint8_t chunk[CHUNKSIZE+sizeof(uint32_t)];
+	uint8_t chunk[CHUNKSIZE+sizeof(uint32_t)] = {0};
 	char name[15];
 	uint8_t fileNum;
 
 	QueueHandle_t requestQ = (QueueHandle_t) pvParams;
 	Calendar_t time = {0};
-
+//*******************************************************************************files not keeping numbers after reboot
 	while(1){
 
 		//Wait until we get a request to transfer image.
@@ -338,11 +376,14 @@ void imageTransfer(void * pvParams){
 		snprintf(name,15,"flash/%02d.jpg",fileNum);
 
 		file = yaffs_open(name,O_RDONLY,0);
-
+		int err = yaffsfs_GetError(); //=================================ditto
+		int access = yaffs_access(name, 0); //===========================ditto
 		size = 0;
 		numChunks =0;
-
-
+		//size = 196544; //===============================================ditto
+		//uint8_t *fileNum = 0x2005e447; //==============================="
+		//yaffs_fsync(file);//==========================================ditto
+		//file = 0; //=================================================added by Ryan
 		if(file<0){
 			//send negative response.
 
@@ -359,6 +400,8 @@ void imageTransfer(void * pvParams){
 		else{
 
 			size = yaffs_lseek(file,0,SEEK_END);
+
+
 			yaffs_lseek(file,0,SEEK_SET);
 			numChunks = (size%CHUNKSIZE==0) ? size/CHUNKSIZE: size/CHUNKSIZE+1;
 			//Send info packet.
@@ -373,6 +416,7 @@ void imageTransfer(void * pvParams){
 		}
 		vTaskDelay(pdMS_TO_TICKS(500));
 		for(int i=0; i< numChunks;i++){
+
 			int readSize = yaffs_read(file,&chunk[sizeof(uint32_t)],CHUNKSIZE);
 			*((uint32_t*)&chunk[0]) = i*CHUNKSIZE; //Send the position (in bytes) where this packet belongs.
 			telemetryPacket_t telemetry;
@@ -382,7 +426,7 @@ void imageTransfer(void * pvParams){
 			telemetry.data = chunk;
 
 			sendTelemetryAddr(&telemetry,GROUND_CSP_ADDRESS);
-			vTaskDelay(10);
+			vTaskDelay(200);
 		}
 
 		yaffs_close(file);
@@ -433,25 +477,171 @@ void rx_image(uint8_t * chunk,uint16_t size,uint16_t num){
 
 
 void takeImage(uint8_t camNum,Calendar_t * time){
+	static int initialized = 0;
+	static int desiredLoopNum = 1;
+	int numBulkImagesTaken = 0;
+	while(numBulkImagesTaken<desiredLoopNum){
+	numBulkImagesTaken++;
+	if (numBulkImagesTaken > 94){
+		int testaaa = 0;
+	}
+	camNum = 2;
+	powerCamera(camNum,1);
+	HAL_Delay(100);
+	if (initialized == 0){
+	resetCamera(camNum);
+	HAL_Delay(100);
+	}
 
-	uint8_t imageNum;
+	uint16_t imageNum;
 	//Find which file we want to save to....
 	int file = allocateImageFile(&imageNum);
 
 	//Start image capture.
-	int imageSize =0;
+	int imageSize = 0;
 
-	//Setup the correct camera
+	//Setup the correct camera (Setting bits enables CAM 1)
 	if(camNum == 1){
-
+		//Change the MUX pins so that CAM 1 is used.
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,1);
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_14,1);
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_15,1);
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_15,1);
 	}
 	else if(camNum == 2){
-
+		//Change the MUX pins so that CAM 2 is used.
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_12,0);
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_14,0);
+		HAL_GPIO_WritePin(GPIOB,GPIO_PIN_15,0);
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_15,0);
 	}
 
 	//Capture the image.
-	//stuff...
 
+	imageCaptureFlag = 0;//Make sure this is zero, since the vsync interrupt will set to 1 when the image is received.
+
+	//CameraSoftReset(); //Soft reset to camera not needed currently
+	if (initialized == 0){
+	CameraSensorInit(camNum);
+	StartSensorInJpegMode(1280,960, camNum); //When changed to 1600,1200 or 800x600 getting errors currently
+	}
+	initialized = initialized + 1;
+
+	vTaskDelay(pdMS_TO_TICKS(1000));
+	//enable interrupts
+	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_FRAME);
+	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_VSYNC);
+	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_LINE);
+	__HAL_DCMI_ENABLE_IT(&hdcmi, DCMI_IT_ERR);
+
+	//Start DMA
+	HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t) jpeg_buffer, img_size);
+	vTaskDelay(pdMS_TO_TICKS(100));
+	//Take an image
+	DoCapture(camNum);
+
+
+	//Wait for the image to be transfered from the camera to the processor.
+	while(1){
+		if (imageCaptureFlag == 1){
+			break;
+		}
+		vTaskDelay(pdMS_TO_TICKS(50));
+	}
+
+
+	//Now read in the size of the image...
+
+	uint32_t actualImageSize = CheckJpegSize(camNum);//Get actual value...
+	uint32_t width = checkResolutionWidth(camNum);
+	uint32_t height= checkResolutionHeight(camNum);
+
+	//Next we should copy the image from RAM into a file in the file system. The file was opened at the start of this function...
+	//This is also where we flip some of the data bits to solve the hardware problem with MUX.
+	//Make sure to remove bit flips in the final version of the software!
+
+	uint32_t numberOfLines = linecount;
+
+	uint32_t status = checkJpegStatus(camNum);
+
+	//Flip the bits. Data 0 and 1 are flipped as well as data 4 and 5.
+	//There is a test program in Tests/ that can be run on a PC, showing the logic is correct.
+	for(int i=0; i<actualImageSize/4;i++){
+
+        uint32_t temp = jpeg_buffer[i];
+        uint8_t LeftByte = (temp>>24) & 0xFF; //The left most byte. XX_YY_ZZ_AA >> 24 == 00_00_00_XX.
+        uint8_t MidLeftByte = (temp>>16) & 0xFF; //The second left most byte. XX_YY_ZZ_AA >> 16 -> 00_00_XX_YY then & 0xFF -> 00_00_00__YY
+        uint8_t MidRightByte = (temp>>8) & 0xFF; //Middle right byte
+        uint8_t RightByte = (temp & 0xFF); // The right most byte.
+
+        //Essentially shift the data to the left once, this moves bits 5 and 1, then mask their new position.
+        //Then shift right 1 to get bit 0 and 4 into the right place, again mask out the new position.
+        //Then combine everything by ORing, but also include the original data, masked out for the spots that were changed.
+
+        uint8_t new_LB = ((LeftByte>>1)&0x11)  | ((LeftByte<<1)& 0x22) | (LeftByte & 0xCC);
+
+        uint8_t new_MLB = ((MidLeftByte>>1)&0x11)  | ((MidLeftByte<<1)& 0x22) | (MidLeftByte & 0xCC);
+
+        uint8_t new_MRB = ((MidRightByte>>1)&0x11)  | ((MidRightByte<<1)& 0x22) | (MidRightByte & 0xCC);
+
+        uint8_t new_RB = ((RightByte>>1)&0x11)  | ((RightByte<<1)& 0x22) | (RightByte & 0xCC);
+
+        //Reassemble into uint32_t values.
+        uint32_t newByte = (new_LB << 24) + (new_MLB << 16) + (new_MRB <<8) + new_RB;
+
+        jpeg_buffer[i] = newByte;
+	}
+
+	uint32_t restartCoutn =0;
+	uint8_t* jpeg_buffer_byte = (uint8_t*) jpeg_buffer;
+
+	for(int i=0; i< (img_size-1);i++){
+
+		uint8_t temp1 = jpeg_buffer_byte[i];
+		uint8_t temp2 = jpeg_buffer_byte[i+1];
+		if(temp1 == 0xFF && (temp2>= 0xD0 && temp2<= 0xD7)){
+			restartCoutn ++;
+		}
+	}
+
+	//If jpeg header is in an array of size jpegHeaderSize:
+	int res = yaffs_write(file, jpegHeader, JPEG_HEADER_SIZE);
+
+	//Can we write in one go? let's try...
+	res = yaffs_write(file,jpeg_buffer,actualImageSize);
+
+	//add the 2 byte jpeg footer.
+	res = yaffs_write(file,jpegFooter, JPEG_FOOTER_SIZE);
+
+	//Very important, close the file.
+	res = yaffs_close(file);
+
+	char filename[20];
+	snprintf(filename,15,"%s/%02d.%s",FILESYSTEM_ROOT,imageNum,IMAGE_FORMAT_TYPE);
+
+	int checkFile = yaffs_open(filename,O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
+
+	uint32_t errorCount=0;
+//	jpeg_buffer_byte[1717] = 0xAA;
+	for(int i=0; i<actualImageSize/1024;i++){
+
+		uint8_t fileData[1024];
+		if(i==0){
+			yaffs_read(checkFile,&fileData[0],625);
+		}
+		int readSize = yaffs_read(checkFile,&fileData[0],1024);
+
+		for(int j=0;j<readSize;j++){
+
+			if(jpeg_buffer_byte[i*1024+j] != fileData[j]){
+
+				errorCount++;
+			}
+		}
+
+
+	}
+	yaffs_close(checkFile);
 	//Once the image is taken, we should send a message to CDH to let it know it can request the image transfer.
 	//We let CDH know some metadata as well: image number and the size.CDH should already know which camera, and the timestamp.
 	telemetryPacket_t t;
@@ -469,7 +659,6 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 	sendTelemetry(&t);
 
 	//Now lets also keep a log on the payload filesystem, as a backup.
-
 	int fd = yaffs_open(IMAGE_LOG_FILE_PATH,O_CREAT|O_RDWR,S_IREAD| S_IWRITE);
 
 	if(fd<0){
@@ -494,7 +683,97 @@ void takeImage(uint8_t camNum,Calendar_t * time){
 		yaffs_write(fd, logMsg, strlen(logMsg));
 		yaffs_close(fd);
 	}
+	powerCamera(camNum,0);
+	}//====================================================================
 
 
+}
+
+void powerCamera(uint8_t camNum, uint8_t onOrOff){
+
+	if(camNum == 1 && onOrOff == 0){
+		//Power off camera 1.
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_2,0);
+	}
+	else if(camNum == 1 && onOrOff == 1){
+		//Power on camera 1.
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_2,1);
+	}
+	else if(camNum == 2 && onOrOff == 0){
+		//Power off camera 2.
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_3,0);
+	}
+	else if(camNum == 2 && onOrOff == 1){
+		//Power on camera 2.
+		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_3,1);
+	}
+
+
+}
+void resetCamera(uint8_t camNum){
+
+	//Do a hardware reset.
+	if(camNum == 1){
+		//Reset Camera 1 (note delay needs to be at least 1 µs)
+		HAL_GPIO_WritePin(GPIOA, 3, 1);
+		HAL_Delay(100);
+		HAL_GPIO_WritePin(GPIOA, 3, 0);
+		HAL_Delay(100);
+	}
+	else if (camNum == 2){
+		//Reset Camera 2 (note delay needs to be at least 1 µs)
+		HAL_GPIO_WritePin(GPIOA, 5, 1);
+		HAL_Delay(100);
+		HAL_GPIO_WritePin(GPIOA, 5, 0);
+		HAL_Delay(100);
+	}
+
+}
+
+void HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+	HAL_DCMI_Stop(hdcmi);
+
+
+
+	imageCaptureFlag = 1;
+
+}
+void HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *hdcmi,uint8_t camNum)
+{
+	//Stop DCMI. Not sure if needed, but if not maybe this will still save power?
+	//HAL_DCMI_Stop(hdcmi);
+//	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_FRAME);
+//	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_VSYNC);
+//	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_LINE);
+//	__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_ERR);
+		HAL_DCMI_Stop(hdcmi);
+			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_FRAME);
+			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_VSYNC);
+			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_LINE);
+			__HAL_DCMI_DISABLE_IT(hdcmi, DCMI_IT_ERR);
+
+			jpegstatus = checkJpegStatus(camNum); ///==============================================commenting these may cause problems, may be unneeded
+			doHandshake(camNum);
+			jpegstatus = checkJpegStatus(camNum);
+
+
+
+
+	//Set the flag so the main loop knows we have a complete image.
+	imageCaptureFlag  == 1;
+
+
+
+
+
+}
+void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
+{
+	//Stop DCMI. Not sure if needed, but if not maybe this will still save power?
+//	HAL_DCMI_Stop(hdcmi);
+
+	//Set the flag so the main loop knows we have a complete image.
+	linecount++;
 
 }
